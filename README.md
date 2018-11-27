@@ -1,1 +1,1 @@
-# CS420
+# CS420 Term Project
