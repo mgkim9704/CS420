@@ -1,7 +1,7 @@
 class TYPE():
   def __init__(self):
     self.type = 0
-  def is_null(self):
+  def is_void(self):
     return False
   def is_int(self):
     return False
@@ -22,7 +22,7 @@ class TYPE():
     return False
 
 
-class Type_null(TYPE):
+class Type_void(TYPE):
   def __init__(self):
     self.type = 0
 
@@ -71,12 +71,12 @@ class Type_pointer(TYPE):
     return True
 
   def __eq__(self, other):
-    if self.type == other.type && self.baseType == other.baseType:
+    if self.type == other.type and self.baseType == other.baseType:
       return True
     return False
 
 
-class Type_fundef(TYPE):
+class Type_fun(TYPE):
   def __init__(self, paramsType, returnType):
     self.type = 6
     self.paramsType = paramsType
@@ -86,11 +86,12 @@ class Type_fundef(TYPE):
     return True
 
   def __eq__(self, other):
-    if self.type == other.type && self.paramsType == other.paramsType && self.returnType == other.returnType:
+    if self.type == other.type and self.paramsType == other.paramsType and self.returnType == other.returnType:
       return True
     return False
 
-class Type_list(TYPE):
+
+class Type_list:
   def __init__(self):
     self.type = 7
     self.list = LinkedList()
@@ -99,6 +100,6 @@ class Type_list(TYPE):
     self.list.insert_back(n)
 
   def __eq__(self, other):
-    if self.type == self.other && self.list == other.list:
+    if self.type == self.other and self.list == other.list:
       return True
     return False

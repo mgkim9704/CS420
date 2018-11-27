@@ -93,11 +93,11 @@ class LinkedList:
   def __eq__(self, other):
     p = self._front.next
     q = other._front.next
-    while p != self._rear && q != other._rear:
+    while p != self._rear and q != other._rear:
       if p.el != q.el:
         return False
       p = p.next
       q = q.next
-    if p == self._rear && q == other._rear:
+    if p == self._rear and q == other._rear:
       return True
     return False
