@@ -123,11 +123,8 @@ lexer = lex.lex()
 
 if __name__ == '__main__':
 	import sys
-	f = open(sys.argv[1])
-	lines = f.readlines()
-	code = ""
-	for l in lines:
-		code += l
+	f = open(sys.argv[1], 'r')
+	code = f.read()
 	lexer.input(code)
 	while 1:
 		token = lexer.token()
