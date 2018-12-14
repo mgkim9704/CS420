@@ -9,12 +9,12 @@ import lex
 # Reserved words
 
 reserved = (
-	'CHAR', 'ELSE', 'EXTERN', 'FLOAT', 'FOR', 'IF', 'INT', 'RETURN', 'STATIC' 'VOID', 'WHILE',
+	'CHAR', 'ELSE', 'EXTERN', 'FLOAT', 'FOR', 'IF', 'INT', 'RETURN', 'STATIC', 'VOID',
 )
 
 tokens = reserved + (
 	# Literals (identifier, integer constant, float constant, string constant, char const)
-	'ID', 'TYPEID', 'INUM', 'FNUM', 'STRING', 'CHARACTER',
+	'ID', 'INUM', 'FNUM', 'STRING', 'CHARACTER',
 
 	# Operators (+,-,*,/,% |, &, ~, ^, <<, >>, ||, &&, !, <, <=, >, >=, ==, !=)
 	'PLUS', 'MINUS', 'TIMES', 'DIVIDE', 'MOD',
@@ -28,11 +28,11 @@ tokens = reserved + (
 	# Increment/decrement (++,--)
 	'INCREMENT', 'DECREMENT',
 
-	# Delimeters ( ) [ ] { } , . ; :
+	# Delimeters ( ) [ ] { } , ;
 	'LPAREN', 'RPAREN',
 	'LBRACKET', 'RBRACKET',
 	'LBRACE', 'RBRACE',
-	'COMMA', 'PERIOD', 'SEMI', 'COLON',
+	'COMMA', 'SEMI', 
 )
 
 reserved_map = {}
@@ -77,9 +77,7 @@ t_RBRACKET         = r'\]'
 t_LBRACE           = r'\{'
 t_RBRACE           = r'\}'
 t_COMMA            = r','
-t_PERIOD           = r'\.'
 t_SEMI             = r';'
-t_COLON            = r':'
 
 # Identifiers
 def t_ID(t):

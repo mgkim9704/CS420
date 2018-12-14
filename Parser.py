@@ -25,6 +25,18 @@ def p_primary_expression(t):
                           '''
 	pass
 
+
+# ---------------------------------------------------------------
+# constant 
+# ---------------------------------------------------------------
+def p_constant(t):
+	'''constant : INUM
+                | FNUM
+                | CHARACTER'''
+	pass
+
+
+
 # ---------------------------------------------------------------
 # postfix-expression:
 #	primary-expression
@@ -65,7 +77,7 @@ def p_postfix_expression_7(t):
 	'postfix_expression : LPAREN type_name RPAREN LBRACKET initializer_list RBRACKET'
 	pass
 
-def p_postfix_expression_7(t):
+def p_postfix_expression_8(t):
 	'postfix_expression : LPAREN type_name RPAREN LBRACKET initializer_list COMMA RBRACKET'
 	pass
 
@@ -76,11 +88,11 @@ def p_postfix_expression_7(t):
 #	argument-expression-list , assignment-expression
 # ---------------------------------------------------------------
 def p_argument_expression_list_1(t):
-	'argument_expression_list : argument_expression'
+	'argument_expression_list : assignment_expression'
 	pass
 
 def p_argument_expression_list_2(t):
-	'argument_expression_list : argument_expression_list COMMA argument_expression'
+	'argument_expression_list : argument_expression_list COMMA assignment_expression'
 	pass
 
 
@@ -136,11 +148,11 @@ def p_unary_operator(t):
 #	( type-name ) cast-expression
 # ---------------------------------------------------------------
 def p_cast_expression_1(t):
-	'cast-expression : unary_expression'
+	'cast_expression : unary_expression'
 	pass
 
 def p_cast_expression_2(t):
-	'cast-expression : LPAREN type_name RPAREN cast_expression'
+	'cast_expression : LPAREN type_name RPAREN cast_expression'
 	pass
 
 
@@ -152,19 +164,19 @@ def p_cast_expression_2(t):
 #	multiplicative-expression % cast-expression
 # ---------------------------------------------------------------
 def p_multiplicative_expression_1(t):
-	'multiplicative_expression : cast-expression'
+	'multiplicative_expression : cast_expression'
 	pass
 
 def p_multiplicative_expression_2(t):
-	'multiplicative_expression : multiplicative_expression TIMES cast-expression'
+	'multiplicative_expression : multiplicative_expression TIMES cast_expression'
 	pass
 
 def p_multiplicative_expression_3(t):
-	'multiplicative_expression : multiplicative_expression DIVIDE cast-expression'
+	'multiplicative_expression : multiplicative_expression DIVIDE cast_expression'
 	pass
 
 def p_multiplicative_expression_4(t):
-	'multiplicative_expression : multiplicative_expression MOD cast-expression'
+	'multiplicative_expression : multiplicative_expression MOD cast_expression'
 	pass
 
 
@@ -201,7 +213,7 @@ def p_shift_expression_2(t):
 	'shift_expression : shift_expression LSHIFT additive_expression'
 	pass
 
-def p_shift_expression_1(t):
+def p_shift_expression_3(t):
 	'shift_expression : shift_expression RSHIFT additive_expression'
 	pass
 
@@ -339,11 +351,11 @@ def p_conditional_expression(t):
 #	unary-expression assignment-operator assignment-expression
 # ---------------------------------------------------------------
 def p_assignment_expression_1(t):
-	'assignment-expression : conditional_expression'
+	'assignment_expression : conditional_expression'
 	pass
 
-def p_assignment_expression_1(t):
-	'assignment-expression : unary_expression assignment_operator assignment_expression'
+def p_assignment_expression_2(t):
+	'assignment_expression : unary_expression assignment_operator assignment_expression'
 	pass
 
 
@@ -374,8 +386,8 @@ def p_expression_2(t):
 # constant-expression:
 	conditional-expression
 # ---------------------------------------------------------------
-def p_constant-expression(t):
-	'constant-expression : conditional_expression'
+def p_constant_expression(t):
+	'constant_expression : conditional_expression'
 	pass
 
 
@@ -423,11 +435,11 @@ def p_declaration_specifiers_4(t):
 #	init-declarator-list , init-declarator
 # ---------------------------------------------------------------
 def p_init_declarator_list_1(t):
-	'init_declarator_list : init-declarator'
+	'init_declarator_list : init_declarator'
 	pass
 
 def p_init_declarator_list_2(t):
-	'init_declarator_list : init-declarator-list , init-declarator'
+	'init_declarator_list : init_declarator_list COMMA init_declarator'
 	pass
 
 
@@ -440,7 +452,7 @@ def p_init_declarator_1(t):
 	'init_declarator : declarator'
 	pass
 
-def p_init_declarator_1(t):
+def p_init_declarator_2(t):
 	'init_declarator : declarator EQUALS initializer'
 	pass
 
@@ -468,11 +480,25 @@ def p_storage_class_specifier(t):
 #	float
 # ---------------------------------------------------------------
 def p_type_specifier(t):
-	'''type_specifier : INT
+	'''type_specifier : VOID
                       | CHAR
                       | INT
                       | FLOAT
                       '''
+
+
+# ---------------------------------------------------------------
+# specifier-qualifier-list:
+#	type-specifier specifier-qualifier-list(opt)
+#	type-qualifier specifier-qualifier-list(opt)		<- remove
+# ---------------------------------------------------------------
+def p_specifier_qualifier_list_1(t):
+	'specifier_qualifier_list : type_specifier specifier_qualifier_list'
+	pass
+
+def p_specifier_qualifier_list_2(t):
+	'specifier_qualifier_list : type_specifier'
+	pass
 
 
 # ---------------------------------------------------------------
@@ -500,7 +526,7 @@ def p_declarator_2(t):
 #	direct-declarator ( identifier-list(opt) )
 # ---------------------------------------------------------------
 def p_direct_declarator_1(t):
-	'direct_declarator : identifier'
+	'direct_declarator : ID'
 	pass
 
 def p_direct_declarator_2(t):
@@ -589,11 +615,11 @@ def p_parameter_declaration_2(t):
 #	identifier-list , identifier
 # ---------------------------------------------------------------
 def p_identifier_list_1(t):
-	'identifier_list : identifier'
+	'identifier_list : ID'
 	pass
 
-def p_identifier_list_1(t):
-	'identifier_list : identifier_list COMMA identifier'
+def p_identifier_list_2(t):
+	'identifier_list : identifier_list COMMA ID'
 	pass 
 
 
@@ -661,12 +687,12 @@ def p_designation(t):
 #	designator
 #	designator-list designator
 # ---------------------------------------------------------------
-def p_designation_list_1(t):
-	'designation_list : designator'
+def p_designator_list_1(t):
+	'designator_list : designator'
 	pass
 
-def p_designation_list_2(t):
-	'designation_list : designation_list designator'
+def p_designator_list_2(t):
+	'designator_list : designator_list designator'
 	pass
 
 
@@ -675,81 +701,154 @@ def p_designation_list_2(t):
 #	[ constant-expression ]
 #	. identifier 					<- remove
 # ---------------------------------------------------------------
-def p_designator(t):
+def p_designator_1(t):
 	'designator : LBRACE constant_expression RBRACE'
 	pass
 
 
 # ---------------------------------------------------------------
 # statement:
-#	if ( expression ) statement
-#	if ( expression ) statement else statement
-#	for ( expression(opt) ; expression(opt) ; expression(opt) ) statement
-#	for ( declaration expression(opt) ; expression(opt) ) statement
-#	return expression(opt) ;
+#	selection-statement
+#	iteration-statement
+#	jump_statement
+#	compound-statement
 # ---------------------------------------------------------------
 def p_statement_1(t):
-	'statement : IF LPAREN expression RPAREN statement'
+	'statement : selection_statement'
 	pass
 
 def p_statement_2(t):
-	'statement : IF LPAREN expression RPAREN statement ELSE statement'
+	'statement : iteration_statement'
 	pass
 
 def p_statement_3(t):
-	'statement : FOR LPAREN expression SEMI expression SEMI expression RPAREN statement'
+	'statement : jump_statement'
 	pass
 
 def p_statement_4(t):
-	'statement : FOR LPAREN SEMI expression SEMI expression RPAREN statement'
+	'statement : compound_statement'
 	pass
 
-def p_statement_5(t):
-	'statement : FOR LPAREN expression SEMI SEMI expression RPAREN statement'
+
+# ---------------------------------------------------------------
+# compound-statement:
+#	{ block-item-list(opt) }
+# ---------------------------------------------------------------
+def p_compound_statement_1(t):
+	'compound_statement : LBRACE block_item_list RBRACE'
 	pass
 
-def p_statement_6(t):
-	'statement : FOR LPAREN expression SEMI expression SEMI RPAREN statement'
+def p_compound_statement_2(t):
+	'compound_statement : LBRACE RBRACE'
 	pass
 
-def p_statement_7(t):
-	'statement : FOR LPAREN SEMI SEMI expression RPAREN statement'
+
+# ---------------------------------------------------------------
+# block-item-list:
+#	block-item
+#	block-item-list block-item
+# ---------------------------------------------------------------
+def p_block_item_list_1(t):
+	'block_item_list : block_item'
 	pass
 
-def p_statement_8(t):
-	'statement : FOR LPAREN SEMI expression SEMI RPAREN statement'
+def p_block_item_list_2(t):
+	'block_item_list : block_item_list block_item'
 	pass
 
-def p_statement_9(t):
-	'statement : FOR LPAREN expression SEMI SEMI RPAREN statement'
+
+# ---------------------------------------------------------------
+# block-item:
+#	declaration
+#	statement
+# ---------------------------------------------------------------
+def p_block_item_1(t):
+	'block_item : declaration'
 	pass
 
-def p_statement_10(t):
-	'statement : FOR LPAREN SEMI SEMI RPAREN statement'
+def p_block_item_2(t):
+	'block_item : statement'
 	pass
 
-def p_statement_11(t):
-	'statement : FOR LPAREN declaration expression SEMI expression RPAREN statement'
+
+# ---------------------------------------------------------------
+# selection-statement:
+#	if ( expression ) statement
+#	if ( expression ) statement else statement
+# ---------------------------------------------------------------
+def p_selection_statement_1(t):
+	'selection_statement : IF LPAREN expression RPAREN statement'
 	pass
 
-def p_statement_12(t):
-	'statement : FOR LPAREN declaration SEMI expression RPAREN statement'
+def p_selection_statement_2(t):
+	'selection_statement : IF LPAREN expression RPAREN statement ELSE statement'
 	pass
 
-def p_statement_13(t):
-	'statement : FOR LPAREN declaration expression SEMI RPAREN statement'
+
+# ---------------------------------------------------------------
+# iteration-statement:
+#	for ( expression(opt) ; expression(opt) ; expression(opt) ) statement
+#	for ( declaration expression(opt) ; expression(opt) ) statement
+# ---------------------------------------------------------------
+def p_iteration_statement_1(t):
+	'iteration_statement : FOR LPAREN expression SEMI expression SEMI expression RPAREN statement'
 	pass
 
-def p_statement_14(t):
-	'statement : FOR LPAREN declaration SEMI RPAREN statement'
+def p_iteration_statement_2(t):
+	'iteration_statement : FOR LPAREN SEMI expression SEMI expression RPAREN statement'
 	pass
 
-def p_statement_15(t):
-	'statemant : RETURN expression SEMI'
+def p_iteration_statement_3(t):
+	'iteration_statement : FOR LPAREN expression SEMI SEMI expression RPAREN statement'
 	pass
 
-def p_statement_16(t):
-	'statemant : RETURN SEMI'
+def p_iteration_statement_4(t):
+	'iteration_statement : FOR LPAREN expression SEMI expression SEMI RPAREN statement'
+	pass
+
+def p_iteration_statement_5(t):
+	'iteration_statement : FOR LPAREN SEMI SEMI expression RPAREN statement'
+	pass
+
+def p_iteration_statement_6(t):
+	'iteration_statement : FOR LPAREN SEMI expression SEMI RPAREN statement'
+	pass
+
+def p_iteration_statement_7(t):
+	'iteration_statement : FOR LPAREN expression SEMI SEMI RPAREN statement'
+	pass
+
+def p_iteration_statement_8(t):
+	'iteration_statement : FOR LPAREN SEMI SEMI RPAREN statement'
+	pass
+
+def p_iteration_statement_9(t):
+	'iteration_statement : FOR LPAREN declaration expression SEMI expression RPAREN statement'
+	pass
+
+def p_iteration_statement_10(t):
+	'iteration_statement : FOR LPAREN declaration SEMI expression RPAREN statement'
+	pass
+
+def p_iteration_statement_11(t):
+	'iteration_statement : FOR LPAREN declaration expression SEMI RPAREN statement'
+	pass
+
+def p_iteration_statement_12(t):
+	'iteration_statement : FOR LPAREN declaration SEMI RPAREN statement'
+	pass
+
+
+# ---------------------------------------------------------------
+# jump-statement:
+#	return expression(opt) ;
+# ---------------------------------------------------------------
+def p_jump_statement_1(t):
+	'jump_statement : RETURN expression SEMI'
+	pass
+
+def p_jump_statement_2(t):
+	'jump_statement : RETURN SEMI'
 	pass
 
 
@@ -786,11 +885,11 @@ def p_external_declaration_2(t):
 #	declaration-specifiers declarator declaration-list(opt) compound-statement
 # ---------------------------------------------------------------
 def p_function_definition_1(t):
-	'function_definition : declaration_specifiers declarator declaration_list compound-statement'
+	'function_definition : declaration_specifiers declarator declaration_list compound_statement'
 	pass
 
 def p_function_definition_2(t):
-	'function_definition : declaration_specifiers declarator compound-statement'
+	'function_definition : declaration_specifiers declarator compound_statement'
 	pass
 
 
@@ -803,9 +902,16 @@ def p_declaration_list_1(t):
 	'declaration_list : declaration'
 	pass
 
-def p_declaration_list_1(t):
+def p_declaration_list_2(t):
 	'declaration_list : declaration_list declaration'
 	pass
+
+
+# ---------------------------------------------------------------
+# error
+# ---------------------------------------------------------------
+def p_error(t):
+	print("Error");
 
 # ---------------------------------------------------------------
 # Build the grammar
