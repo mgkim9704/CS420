@@ -401,6 +401,7 @@ def p_parameter_type_list(t):
 #	iteration-statement
 #	jump_statement
 #	compound-statement
+#	expression-statement
 # ---------------------------------------------------------------
 def p_statement_1(t):
 	'statement : selection_statement'
@@ -416,6 +417,10 @@ def p_statement_3(t):
 
 def p_statement_4(t):
 	'statement : compound_statement'
+	pass
+
+def p_statement_5(t):
+	'statement : expression_statement'
 	pass
 
 
@@ -504,6 +509,15 @@ def p_block_item_1(t):
 
 def p_block_item_2(t):
 	'block_item : statement'
+	pass
+
+
+# ---------------------------------------------------------------
+# expression-statement:
+#	expressionopt ;
+# ---------------------------------------------------------------
+def p_expression_statement(t):
+	'expression_statement : expressionopt SEMI'
 	pass
 
 
@@ -939,8 +953,8 @@ parser = yacc.yacc()
 
 
 # ---------------------------------------------------------------
-#if __name__ == '__main__':
-#	import sys
-#	f = open(sys.argv[1], 'r')
-#	code = f.read()
-#	parser.parse(code, debug = True, lexer = lexer)
+if __name__ == '__main__':
+	import sys
+	f = open(sys.argv[1], 'r')
+	code = f.read()
+	parser.parse(code, debug = True, lexer = Lexer.lexer)
