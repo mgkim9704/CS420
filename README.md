@@ -2,10 +2,12 @@
 
 * lex.py , yacc.py: Python Lex-Yacc(David M. Beazley, ver 3.11)  
 
-* Lexer.py: c lexer (you can test with "python3 Lexer.py [c-code file name]")  
+* Lexer.py: c lexer
+  * you can test with "python3 Lexer.py [c-code file name]"  
 
-* Paser.py: c parser (detail descriptions(BNF) are included in the code)  
-  * http://www.open-std.org/jtc1/sc22/wg14/www/docs/n1124.pdf (p.409~)  
+* Paser.py: c parser (detail descriptions(BNF) are included in the code)
+  * http://www.open-std.org/jtc1/sc22/wg14/www/docs/n1124.pdf (p.409~)
+  * you can test with "python3 Parser.py [c-code file name]"  
 
-* test.c: text code which is provided by TA
+* test.c: test code which is provided by TA
 
