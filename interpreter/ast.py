@@ -14,8 +14,10 @@ class DecoratedName(NamedTuple):
   # false: No deco, true: pointer, (int): array length
   decorator: Union[bool, int]
 
-Expr_Var = NewType('Expr_Var', str)
-Expr_Lit = NewType('Expr_Lit', Union[int, float])
+Expr_Var = str
+
+class Expr_Lit(NamedTuple):
+  val: Union[int, float]
 
 class Expr_Bin(NamedTuple):
   operator: BinOp
@@ -45,11 +47,20 @@ class Stmt_Decl(NamedTuple):
   basetype: Type
   names: List[DecoratedName]
 
-Stmt_Return = NewType('Stmt_Return', Expr)
-Stmt_Expr = NewType('Stmt_Expr', Expr)
-Stmt_Break = NewType('Stmt_Break', None)
-Stmt_Cont = NewType('Stmt_Cont', None)
-Stmt_Mpty = NewType('Stmt_Mpty', None)
+class Stmt_Return(NamedTuple):
+  retval: Expr
+
+class Stmt_Expr(NamedTuple):
+  expr: Expr
+
+class Stmt_Break:
+  pass
+
+class Stmt_Cont:
+  pass
+
+class Stmt_Mpty:
+  pass
 
 # first elem of tuple means the line number of this statement.
 Stmt = Tuple[int, Union[Stmt_For, Stmt_If, Stmt_Return, Stmt_Decl, Stmt_Break, Stmt_Cont, Stmt_Expr, Stmt_Mpty]]

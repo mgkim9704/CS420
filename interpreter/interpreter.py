@@ -25,10 +25,11 @@ class Interpeter:
     for f in p:
       if f.name in self.program:
         raise 'NameError'
+      self.program[f.name] = f
 
   # run the given program
   # return: the return value of main function
-  def run(self) -> Optional[int]:
+  def run(self) -> Optional[Value]:
     return self.eval_func('main', [])
 
   def eval_stmt(self, stmt: ast.Stmt) -> Optional[Value]:
@@ -66,21 +67,23 @@ class Interpeter:
       raise ''
     
     
-  def eval_block(self, block: List[ast.Stmt]) -> Optional[Value]:
+  def eval_block(self, block: List[ast.Stmt]) -> Value:
     
-    v = None
+    v: Value = 0
     for stmt in block:
-      v = self.eval_stmt(stmt)
+      r = self.eval_stmt(stmt)
+      if r is not None:
+        v = r
     
     return v
 
-  def eval_func(self, name: str, args: List[Value]) -> Optional[Value]:
+  def eval_func(self, name: str, args: List[Value]) -> Value:
     f = self.program[name]
     if len(f.arguments) != len(args):
       raise f'function {name} requires {len(f.arguments)} arguments, but' + \
         f'you\'re calling with {len(args)} arguments.'
 
-    newenv = {}
+    newenv: Dict[str, int] = {}
     fp = len(self.mem) # frame point
     for (tp, (arg_name, _)), arg in zip(f.arguments, args):
       if not isinstance(arg, {ast.Type.Int: int, ast.Type.Float: float}[tp]):
@@ -101,7 +104,7 @@ class Interpeter:
   
   def eval_expr(self, expr: ast.Expr) -> Value:
     if isinstance(expr, ast.Expr_Var):
-      name = expr.name
+      name = expr
       return self.mem[self.env[name]]
 
     elif isinstance(expr, ast.Expr_Lit):
@@ -109,17 +112,20 @@ class Interpeter:
       return val
     
     elif isinstance(expr, ast.Expr_Bin):
-      op, (e1, e2) = expr
-      return self.binop(op, e1, e2)
+      bop, (e1, e2) = expr
+      return self.binop(bop, e1, e2)
 
     elif isinstance(expr, ast.Expr_Un):
-      op, e = expr
-      return self.unop(op, e)
+      uop, e = expr
+      return self.unop(uop, e)
 
     elif isinstance(expr, ast.Expr_Call):
       name, args = expr
       vars = [self.eval_expr(arg) for arg in args]
       return self.eval_func(name, vars)
+    
+    else:
+      raise ''
 
   def binop(self, op: ast.BinOp, e1: ast.Expr, e2: ast.Expr) -> Value:
     if op == ast.BinOp.Add:
@@ -155,10 +161,16 @@ class Interpeter:
         v = self.mem[self.env[e]]
         self.mem[self.env[e]] = v + 1
         return v
+      else:
+        raise f'{e} is not a l-value.'
+
     elif op == ast.UnOp.Dec:
       if isinstance(e, ast.Expr_Var):
         v = self.mem[self.env[e]]
         self.mem[self.env[e]] = v - 1
         return v
+      else:
+        raise f'{e} is not a l-value.'
+
     else:
       raise ''
