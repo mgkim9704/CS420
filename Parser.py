@@ -57,7 +57,7 @@ def p_function_definition(t):
 # ---------------------------------------------------------------
 def p_declaration(t):
 	'declaration : declaration_specifiers init_declarator_listopt SEMI'
-	t[0] = Stmt_Decl(t[1], t[2].list)
+	t[0] = (t.lineno(1), Stmt_Decl(t[1], t[2].list))
 
 
 # ---------------------------------------------------------------
@@ -482,7 +482,7 @@ def p_statement_5(t):
 # ---------------------------------------------------------------
 def p_selection_statement_1(t):
 	'selection_statement : IF LPAREN expression RPAREN statement'
-	t[0] = Stmt_If(t[3].list, t[5])
+	t[0] = (t.lineno(1), Stmt_If(t[3].list, t[5]))
 
 def p_selection_statement_2(t):
 	'selection_statement : IF LPAREN expression RPAREN statement ELSE statement'
@@ -496,7 +496,7 @@ def p_selection_statement_2(t):
 # ---------------------------------------------------------------
 def p_iteration_statement_1(t):
 	'iteration_statement : FOR LPAREN expressionopt SEMI expressionopt SEMI expressionopt RPAREN statement'
-	t[0] = Stmt_For(t[3].list, t[5].list, t[7].list, t[9])
+	t[0] = (t.lineno(1), Stmt_For(t[3].list, t[5].list, t[7].list, t[9]))
 
 def p_iteration_statement_2(t):
 	'iteration_statement : FOR LPAREN declaration expressionopt SEMI expressionopt RPAREN statement'
@@ -511,15 +511,15 @@ def p_iteration_statement_2(t):
 # ---------------------------------------------------------------
 def p_jump_statement_1(t):
 	'jump_statement : RETURN expressionopt SEMI'
-	t[0] = Stmt_Return(t[2].list)
+	t[0] = (t.lineno(1), Stmt_Return(t[2].list))
 
 def p_jump_statement_2(t):
 	'jump_statement : BREAK SEMI'
-	t[0] = Stmt_Break()
+	t[0] = (t.lineno(1), Stmt_Break())
 
 def p_jump_statement_3(t):
 	'jump_statement : CONTINUE SEMI'
-	t[0] = Stmt_Cont()
+	t[0] = (t.lineno(1), Stmt_Cont())
 
 
 # ---------------------------------------------------------------
@@ -528,7 +528,7 @@ def p_jump_statement_3(t):
 # ---------------------------------------------------------------
 def p_compound_statement(t):
 	'compound_statement : LBRACE block_item_listopt RBRACE'
-	t[0] = Stmt_Comp(t[2].list)
+	t[0] = (t.lineno(1), Stmt_Comp(t[2].list))
 
 
 # ---------------------------------------------------------------
@@ -582,7 +582,7 @@ def p_block_item_2(t):
 # ---------------------------------------------------------------
 def p_expression_statement(t):
 	'expression_statement : expressionopt SEMI'
-	t[0] = Stmt_Expr(t[1].list)
+	t[0] = (t.lineno(1), Stmt_Expr(t[1].list))
 
 
 # ---------------------------------------------------------------
@@ -597,7 +597,7 @@ def p_expressionopt_1(t):
 def p_expressionopt_2(t):
 	'expressionopt : empty'
 	temp = myList()
-	temp.add(Stmt_Mpty())
+	temp.add((t.lineno(1), Stmt_Mpty()))
 	t[0] = temp
 
 
