@@ -17,7 +17,7 @@ class DecoratedName(NamedTuple):
 Expr_Var = str
 
 class Expr_Lit(NamedTuple):
-  val: Union[int, float]
+  val: Union[int, float, str]
 
 class Expr_Bin(NamedTuple):
   operator: BinOp
