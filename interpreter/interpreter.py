@@ -37,6 +37,13 @@ class Interpeter:
 
   def eval_stmt(self, stmt: ast.Stmt) -> Tuple[CFD, Optional[Value]]:
 
+'''
+      이 부분 추가 좀 해 주세요
+      if isinstance(stmt, ast.Expr_Comp):
+      body = stmt
+      return self.eval_block(body)
+'''
+
     if isinstance(stmt, ast.Stmt_For):
       init, cond, loop, body = stmt
       if init is not None:
@@ -178,10 +185,20 @@ class Interpeter:
       return self.eval_expr(e1) * self.eval_expr(e2)
     elif op == ast.BinOp.Div:
       return self.eval_expr(e1) / self.eval_expr(e2)
+    elif op == ast.BinOp.Mod:
+      return self.eval_expr(e1) % self.eval_expr(e2)
+    elif op == ast.BinOp.Eq:
+      return self.eval_expr(e1) == self.eval_expr(e2)
+    elif op == ast.BinOp.Ne:
+      return self.eval_expr(e1) != self.eval_expr(e2)
+    elif op == ast.BinOp.Lt:
+      return self.eval_expr(e1) < self.eval_expr(e2)
     elif op == ast.BinOp.Gt:
       return self.eval_expr(e1) > self.eval_expr(e2)
     elif op == ast.BinOp.Le:
-      return self.eval_expr(e1) < self.eval_expr(e2)
+      return self.eval_expr(e1) <= self.eval_expr(e2)
+    elif op == ast.BinOp.Ge:
+      return self.eval_expr(e1) >= self.eval_expr(e2)
     elif op == ast.BinOp.And:
       return self.eval_expr(e1) and self.eval_expr(e2)
     elif op == ast.BinOp.Or:
