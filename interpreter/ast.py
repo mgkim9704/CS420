@@ -11,8 +11,7 @@ Type = Enum('Type', 'Int Float')
 
 class DecoratedName(NamedTuple):
   name: str
-  # false: No deco, true: pointer, (int): array length
-  decorator: Union[bool, int]
+  decorator: Union[bool, int] # false: No deco, true: pointer, (int): array length
 
 Expr_Var = str
 

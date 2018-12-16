@@ -1,12 +1,14 @@
 import sys
+import interpreter.core
+
 
 # read file
-filename = sys.argv[1]
-f=open(filename, 'r')
-lines = f.readlines()
+#filename = sys.argv[1]
+#f=open(filename, 'r')
+#lines = f.readlines()
 #for l in lines:
 
-
+engine = interpreter.core.loadTest()
 
 while True:
   i=input(">> ")

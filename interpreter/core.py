@@ -3,7 +3,7 @@
 
 from typing import Dict, TypeVar, Union, Generic, List, Optional, Tuple
 from enum import Enum
-import ast
+from . import ast
 
 Value = Union[int, float]
 T = TypeVar('T', int, float)
@@ -251,6 +251,12 @@ def fact():
   print(myint.eval_func('fact', [5]))
 
 tests = [test1, test2, test3, cfd_if, fact]
+
+def loadTest():
+  ex = ast.Func('fact', [(ast.Type.Int, ast.DecoratedName('x', False))], ast.Type.Int, False, [ast.Stmt_If(ast.Expr_Bin(ast.BinOp.Le, (ast.Expr_Var('x'), ast.Expr_Lit(2))), [ast.Stmt_Return(ast.Expr_Var('x'))]), ast.Stmt_Return(ast.Expr_Bin(ast.BinOp.Mul, (ast.Expr_Var('x'), ast.Expr_Call('fact', [ast.Expr_Bin(ast.BinOp.Sub, (ast.Expr_Var('x'), ast.Expr_Lit(1)))]))))])
+
+  myint = Interpeter([ex])
+  return myint
 
 if __name__ == '__main__':
   for t in tests:
