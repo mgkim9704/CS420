@@ -62,7 +62,7 @@ def p_declaration(t):
 
 # ---------------------------------------------------------------
 # declaration-listopt:
-#	declaration-list
+#	declaration-list		<- remove
 #	empty
 # ---------------------------------------------------------------
 def p_declaration_listopt_1(t):
@@ -76,10 +76,9 @@ def p_declarationopt_list_2(t):
 
 
 # ---------------------------------------------------------------
-# declaration-list:
+# declaration-list:			<- remove
 #	declaration
 #	declaration-list declaration
-#	empty
 # ---------------------------------------------------------------
 def p_declaration_list_1(t):
 	'declaration_list : declaration'
@@ -97,11 +96,11 @@ def p_declaration_list_2(t):
 # ---------------------------------------------------------------
 def p_declaration_specifiersopt_1(t):
 	'declaration_specifiersopt : declaration_specifiers'
-	t[0] = t[1]
+	raise NotImplementedError
 
 def p_declaration_specifiersopt_2(t):
 	'declaration_specifiersopt : empty'
-	t[0] = None
+	pass
 
 
 # ---------------------------------------------------------------
@@ -132,7 +131,7 @@ def p_storage_class_specifier(t):
 	'''storage_class_specifier : EXTERN 
                                | STATIC
                                '''
-	pass
+	raise NotImplementedError
 
 
 # ---------------------------------------------------------------
@@ -148,7 +147,7 @@ def p_type_specifier_1(t):
 
 def p_type_specifier_2(t):
 	'type_specifier : CHAR'
-	raise NotImplementedError
+	t[0] = Type.Char
 
 def p_type_specifier_3(t):
 	'type_specifier : INT'
@@ -166,7 +165,6 @@ def p_type_specifier_4(t):
 # ---------------------------------------------------------------
 def p_init_declarator_listopt_1(t):
 	'init_declarator_listopt : init_declarator_list'
-	if t[1] is None: raise NotImplementedError
 	t[0] = t[1]
 
 def p_init_declarator_listopt_2(t):
@@ -213,11 +211,11 @@ def p_init_declarator_2(t):
 # ---------------------------------------------------------------
 def p_specifier_qualifier_listopt_1(t):
 	'specifier_qualifier_listopt : specifier_qualifier_list'
-	pass
+	raise NotImplementedError
 
 def p_specifier_qualifier_listopt_2(t):
 	'specifier_qualifier_listopt : empty'
-	pass
+	raise NotImplementedError
 
 
 # ---------------------------------------------------------------
@@ -227,7 +225,7 @@ def p_specifier_qualifier_listopt_2(t):
 # ---------------------------------------------------------------
 def p_specifier_qualifier_list(t):
 	'specifier_qualifier_list : type_specifier specifier_qualifier_listopt'
-	pass
+	raise NotImplementedError
 
 
 # ---------------------------------------------------------------
@@ -267,7 +265,7 @@ def p_direct_declarator_1(t):
 
 def p_direct_declarator_2(t):
 	'direct_declarator : LPAREN declarator RPAREN'
-	pass
+	raise NotImplementedError
 
 def p_direct_declarator_3(t):
 	'direct_declarator : direct_declarator LBRACKET assignment_expressionopt RBRACKET'
@@ -404,12 +402,12 @@ def p_identifier_list_2(t):
 # ---------------------------------------------------------------
 def p_initializer_1(t):
 	'initializer : assignment_expression'
-	pass
+	raise NotImplementedError
 
 def p_initializer_2(t):
 	'''initializer : LBRACE initializer_list RBRACE
                        | LBRACE initializer_list COMMA RBRACE'''
-	pass
+	raise NotImplementedError
 
 
 # ---------------------------------------------------------------
@@ -419,11 +417,11 @@ def p_initializer_2(t):
 # ---------------------------------------------------------------
 def p_initializer_list_1(t):
 	'initializer_list : initializer'
-	pass
+	raise NotImplementedError
 
 def p_initializer_list_2(t):
 	'initializer_list : initializer_list COMMA initializer'
-	pass
+	raise NotImplementedError
 
 
 # ---------------------------------------------------------------
@@ -432,7 +430,7 @@ def p_initializer_list_2(t):
 # ---------------------------------------------------------------
 def p_type_name(t):
 	'type_name : specifier_qualifier_list'
-	pass
+	raise NotImplementedError
 
 
 # ---------------------------------------------------------------
@@ -542,7 +540,7 @@ def p_block_item_listopt_1(t):
 
 def p_block_item_listopt_2(t):
 	'block_item_listopt : empty'
-	raise NotImplementedError
+	t[0] = myList()
 
 
 # ---------------------------------------------------------------
@@ -631,7 +629,7 @@ def p_assignment_expressionopt_1(t):
 
 def p_assignment_expressionopt_2(t):
 	'assignment_expressionopt : empty'
-	raise NotImplementedError
+	t[0] = Stmt_Mpty()
 
 
 # ---------------------------------------------------------------
