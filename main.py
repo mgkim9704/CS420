@@ -1,15 +1,30 @@
 import sys
+import Parser
 import interpreter.core
 
+# Arguments
+if len(sys.argv) == 1:
+  print('No input files')
+  print('Usage: ' + sys.argv[0] + ' <filename> [function] [arguments]')
+  exit(-1)
+
+filename = sys.argv[1]
+
+if len(sys.argv) == 2:
+  funcname = 'main'
+  args = []
+else:
+  funcname = sys.argv[2]
+  args = map(lambda x: int(x), sys.argv[3:])
 
 # read file
-#filename = sys.argv[1]
-#f=open(filename, 'r')
-#lines = f.readlines()
-#for l in lines:
+filename = sys.argv[1]
+with open(filename, 'r') as f:
+  code = f.read()
 
-engine = interpreter.core.loadTest()
-evaluation = engine.eval_func('fact', [4])
+program = Parser.parse(code)
+interp = interpreter.core.Interpreter(program)
+evaluation = interp.eval_func(funcname, args)
 
 while True:
   try:

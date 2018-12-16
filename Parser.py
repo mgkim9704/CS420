@@ -5,6 +5,8 @@
 import sys
 import yacc
 import Lexer
+from interpreter.ast import *
+from parserSupport import *
 
 # Get the token map
 tokens = Lexer.tokens
@@ -17,11 +19,12 @@ tokens = Lexer.tokens
 # ---------------------------------------------------------------
 def p_translation_unit_1(t):
 	'translation_unit : external_declaration'
-	pass
+	t[0] = [t[1]]
 
 def p_translation_unit_2(t):
 	'translation_unit : translation_unit external_declaration'
-	pass
+	t[1].append(t[2])
+	t[0] = t[1]
 
 
 # ---------------------------------------------------------------
@@ -31,11 +34,11 @@ def p_translation_unit_2(t):
 # ---------------------------------------------------------------
 def p_external_declaration_1(t):
 	'external_declaration : function_definition'
-	pass
+	t[0] = t[1]
 
 def p_external_declaration_2(t):
 	'external_declaration : declaration'
-	pass
+	raise NotImplementedError
 
 
 # ---------------------------------------------------------------
@@ -44,7 +47,8 @@ def p_external_declaration_2(t):
 # ---------------------------------------------------------------
 def p_function_definition(t):
 	'function_definition : declaration_specifiers declarator declaration_listopt compound_statement'
-	pass
+	if t[3] is not None: raise NotImplementedError
+	t[0] = Func(t[2][1], t[2][2], t[1], t[2][0], t[4])
 
 
 # ---------------------------------------------------------------
@@ -53,17 +57,17 @@ def p_function_definition(t):
 # ---------------------------------------------------------------
 def p_declaration(t):
 	'declaration : declaration_specifiers init_declarator_listopt SEMI'
-	pass
+	t[0] = (t.lineno(1), Stmt_Decl(t[1], t[2].list))
 
 
 # ---------------------------------------------------------------
 # declaration-listopt:
-#	declaration-list
+#	declaration-list		<- remove
 #	empty
 # ---------------------------------------------------------------
 def p_declaration_listopt_1(t):
 	'declaration_listopt : declaration_list'
-	pass
+	raise NotImplementedError
 
 
 def p_declarationopt_list_2(t):
@@ -72,18 +76,17 @@ def p_declarationopt_list_2(t):
 
 
 # ---------------------------------------------------------------
-# declaration-list:
+# declaration-list:			<- remove
 #	declaration
 #	declaration-list declaration
-#	empty
 # ---------------------------------------------------------------
 def p_declaration_list_1(t):
 	'declaration_list : declaration'
-	pass
+	raise NotImplementedError
 
 def p_declaration_list_2(t):
 	'declaration_list : declaration_list declaration'
-	pass
+	raise NotImplementedError
 
 
 # ---------------------------------------------------------------
@@ -93,7 +96,7 @@ def p_declaration_list_2(t):
 # ---------------------------------------------------------------
 def p_declaration_specifiersopt_1(t):
 	'declaration_specifiersopt : declaration_specifiers'
-	pass
+	raise NotImplementedError
 
 def p_declaration_specifiersopt_2(t):
 	'declaration_specifiersopt : empty'
@@ -109,15 +112,15 @@ def p_declaration_specifiersopt_2(t):
 # ---------------------------------------------------------------
 def p_declaration_specifiers_1(t):
 	'declaration_specifiers : storage_class_specifier declaration_specifiersopt'
-	pass
+	raise NotImplementedError
 
 def p_declaration_specifiers_2(t):
 	'declaration_specifiers : type_specifier declaration_specifiersopt'
-	pass
+	t[0] = t[1]
 
 
 # ---------------------------------------------------------------
-# storage-class-specifier:
+# storage-class-specifier:	
 #	typedef					<- remove
 #	extern
 #	static
@@ -128,7 +131,7 @@ def p_storage_class_specifier(t):
 	'''storage_class_specifier : EXTERN 
                                | STATIC
                                '''
-	pass
+	raise NotImplementedError
 
 
 # ---------------------------------------------------------------
@@ -138,12 +141,21 @@ def p_storage_class_specifier(t):
 #	int
 #	float
 # ---------------------------------------------------------------
-def p_type_specifier(t):
-	'''type_specifier : VOID
-                      | CHAR
-                      | INT
-                      | FLOAT
-                      '''
+def p_type_specifier_1(t):
+	'type_specifier : VOID'
+	t[0] = None
+
+def p_type_specifier_2(t):
+	'type_specifier : CHAR'
+	t[0] = Type.Char
+
+def p_type_specifier_3(t):
+	'type_specifier : INT'
+	t[0] = Type.Int
+
+def p_type_specifier_4(t):
+	'type_specifier : FLOAT'
+	t[0] = Type.Float
 
 
 # ---------------------------------------------------------------
@@ -153,11 +165,11 @@ def p_type_specifier(t):
 # ---------------------------------------------------------------
 def p_init_declarator_listopt_1(t):
 	'init_declarator_listopt : init_declarator_list'
-	pass
+	t[0] = t[1]
 
 def p_init_declarator_listopt_2(t):
 	'init_declarator_listopt : empty'
-	pass
+	raise NotImplementedError
 
 
 # ---------------------------------------------------------------
@@ -167,11 +179,15 @@ def p_init_declarator_listopt_2(t):
 # ---------------------------------------------------------------
 def p_init_declarator_list_1(t):
 	'init_declarator_list : init_declarator'
-	pass
+	temp = myList()
+	temp.add(t[1])
+	t[0] = temp
+	
 
 def p_init_declarator_list_2(t):
 	'init_declarator_list : init_declarator_list COMMA init_declarator'
-	pass
+	t[1].add(t[3])
+	t[0] = t[1]
 
 
 # ---------------------------------------------------------------
@@ -181,11 +197,11 @@ def p_init_declarator_list_2(t):
 # ---------------------------------------------------------------
 def p_init_declarator_1(t):
 	'init_declarator : declarator'
-	pass
+	t[0] = t[1]
 
 def p_init_declarator_2(t):
 	'init_declarator : declarator EQUALS initializer'
-	pass
+	raise NotImplementedError
 
 
 # ---------------------------------------------------------------
@@ -195,11 +211,11 @@ def p_init_declarator_2(t):
 # ---------------------------------------------------------------
 def p_specifier_qualifier_listopt_1(t):
 	'specifier_qualifier_listopt : specifier_qualifier_list'
-	pass
+	raise NotImplementedError
 
 def p_specifier_qualifier_listopt_2(t):
 	'specifier_qualifier_listopt : empty'
-	pass
+	raise NotImplementedError
 
 
 # ---------------------------------------------------------------
@@ -209,7 +225,7 @@ def p_specifier_qualifier_listopt_2(t):
 # ---------------------------------------------------------------
 def p_specifier_qualifier_list(t):
 	'specifier_qualifier_list : type_specifier specifier_qualifier_listopt'
-	pass
+	raise NotImplementedError
 
 
 # ---------------------------------------------------------------
@@ -218,7 +234,16 @@ def p_specifier_qualifier_list(t):
 # ---------------------------------------------------------------
 def p_declarator(t):
 	'declarator : pointeropt direct_declarator'
-	pass
+	if t[2] is None: raise NotImplementedError
+
+	if t[2].type == 1:
+		t[0] = DecoratedName(t[2].value[0], t[1])
+	elif t[2].type == 6:
+		t[0] = (t[1], t[2].value[0], t[2].value[1])
+	elif t[2].type == 3:
+		t[0] = DecoratedName(t[2].value[0], t[2].value[1].val)
+	else: raise NotImplementedError
+				
 
 
 # ---------------------------------------------------------------
@@ -234,32 +259,46 @@ def p_declarator(t):
 # ---------------------------------------------------------------
 def p_direct_declarator_1(t):
 	'direct_declarator : ID'
-	pass
+	temp = directDeclarator(1)
+	temp.add(t[1])
+	t[0] = temp
 
 def p_direct_declarator_2(t):
 	'direct_declarator : LPAREN declarator RPAREN'
-	pass
+	raise NotImplementedError
 
 def p_direct_declarator_3(t):
 	'direct_declarator : direct_declarator LBRACKET assignment_expressionopt RBRACKET'
-	pass
+	temp = directDeclarator(3)
+	temp.add(t[1].value[0])
+	temp.add(t[3])
+	t[0] = temp
 
 def p_direct_declarator_4(t):
 	'direct_declarator : direct_declarator LBRACKET STATIC assignment_expression RBRACKET'
-	pass
+	raise NotImplementedError
 
 def p_direct_declarator_5(t):
 	'direct_declarator : direct_declarator LBRACKET TIMES RBRACKET'
-	pass
+	raise NotImplementedError
 
 def p_direct_declarator_6(t):
 	'direct_declarator : direct_declarator LPAREN parameter_type_list RPAREN'
-	pass
+	if(t[1] is not None and t[1].type == 1):
+		temp = directDeclarator(6)
+		temp.add(t[1].value[0])
+		if t[3] is not None:
+			temp.add(t[3].list)
+		else: temp.add([])
+		t[0] = temp
+	else: raise NotImplementedError
 
 def p_direct_declarator_7(t):
 	'direct_declarator : direct_declarator LPAREN identifier_listopt RPAREN'
+	if(t[1] is not None and t[1].type == 1):
+		t[0] = Expr_Call(t[1], t[3].list)
+	else: raise NotImplementedError
 	pass
-
 
 # ---------------------------------------------------------------
 # pointeropt:
@@ -268,11 +307,11 @@ def p_direct_declarator_7(t):
 # ---------------------------------------------------------------
 def p_pointeropt_1(t):
 	'pointeropt : pointer'
-	pass
+	t[0] = True
 
 def p_pointeropt_2(t):
 	'pointeropt : empty'
-	pass
+	t[0] = False
 
 
 # ---------------------------------------------------------------
@@ -286,6 +325,7 @@ def p_pointer_1(t):
 
 def p_pointer_2(t):
 	'pointer : TIMES pointer'
+	raise NotImplementedError
 	pass
 
 
@@ -296,11 +336,16 @@ def p_pointer_2(t):
 # ---------------------------------------------------------------
 def p_parameter_list_1(t):
 	'parameter_list : parameter_declaration'
-	pass
+	if t[1] is not None:
+		temp = myList()
+		temp.add(t[1])
+		t[0] = temp
 
 def p_parameter_list_2(t):
 	'parameter_list : parameter_list COMMA parameter_declaration'
-	pass
+	if t[3] is not None:
+		t[1].add(t[3])
+		t[0] = t[1]
 
 
 # ---------------------------------------------------------------
@@ -310,11 +355,12 @@ def p_parameter_list_2(t):
 # ---------------------------------------------------------------
 def p_parameter_declaration_1(t):
 	'parameter_declaration : declaration_specifiers declarator'
-	pass
+	t[0] = (t[1], t[2])
 
 def p_parameter_declaration_2(t):
 	'parameter_declaration : declaration_specifiers'
-	pass
+	if t[1] is not None:
+		t[0] = (t[1], None)
 
 
 # ---------------------------------------------------------------
@@ -324,11 +370,11 @@ def p_parameter_declaration_2(t):
 # ---------------------------------------------------------------
 def p_identifier_listopt_1(t):
 	'identifier_listopt : identifier_list'
-	pass
+	t[0] = t[1]
 
 def p_identifier_listopt_2(t):
 	'identifier_listopt : empty'
-	pass
+	t[0] = myList()
 
 
 # ---------------------------------------------------------------
@@ -338,12 +384,14 @@ def p_identifier_listopt_2(t):
 # ---------------------------------------------------------------
 def p_identifier_list_1(t):
 	'identifier_list : ID'
-	pass
+	temp = myList()
+	temp.add(t[1])
+	t[0] = temp
 
 def p_identifier_list_2(t):
 	'identifier_list : identifier_list COMMA ID'
-	pass 
-
+	t[1].add(t[3])
+	t[0] = t[1]
 
 
 # ---------------------------------------------------------------
@@ -354,12 +402,12 @@ def p_identifier_list_2(t):
 # ---------------------------------------------------------------
 def p_initializer_1(t):
 	'initializer : assignment_expression'
-	pass
+	raise NotImplementedError
 
 def p_initializer_2(t):
 	'''initializer : LBRACE initializer_list RBRACE
                        | LBRACE initializer_list COMMA RBRACE'''
-	pass
+	raise NotImplementedError
 
 
 # ---------------------------------------------------------------
@@ -369,11 +417,11 @@ def p_initializer_2(t):
 # ---------------------------------------------------------------
 def p_initializer_list_1(t):
 	'initializer_list : initializer'
-	pass
+	raise NotImplementedError
 
 def p_initializer_list_2(t):
 	'initializer_list : initializer_list COMMA initializer'
-	pass
+	raise NotImplementedError
 
 
 # ---------------------------------------------------------------
@@ -382,7 +430,7 @@ def p_initializer_list_2(t):
 # ---------------------------------------------------------------
 def p_type_name(t):
 	'type_name : specifier_qualifier_list'
-	pass
+	raise NotImplementedError
 
 
 # ---------------------------------------------------------------
@@ -392,7 +440,8 @@ def p_type_name(t):
 # ---------------------------------------------------------------
 def p_parameter_type_list(t):
 	'parameter_type_list : parameter_list'
-	pass
+	if t[1] is not None:
+		t[0]=t[1]
 
 
 # ---------------------------------------------------------------
@@ -405,23 +454,23 @@ def p_parameter_type_list(t):
 # ---------------------------------------------------------------
 def p_statement_1(t):
 	'statement : selection_statement'
-	pass
+	t[0] = t[1]
 
 def p_statement_2(t):
 	'statement : iteration_statement'
-	pass
+	t[0] = t[1]
 
 def p_statement_3(t):
 	'statement : jump_statement'
-	pass
+	t[0] = t[1]
 
 def p_statement_4(t):
 	'statement : compound_statement'
-	pass
+	t[0] = t[1]
 
 def p_statement_5(t):
 	'statement : expression_statement'
-	pass
+	t[0] = t[1]
 
 
 # ---------------------------------------------------------------
@@ -431,11 +480,11 @@ def p_statement_5(t):
 # ---------------------------------------------------------------
 def p_selection_statement_1(t):
 	'selection_statement : IF LPAREN expression RPAREN statement'
-	pass
+	t[0] = (t.lineno(1), Stmt_If(t[3].list, t[5]))
 
 def p_selection_statement_2(t):
 	'selection_statement : IF LPAREN expression RPAREN statement ELSE statement'
-	pass
+	raise NotImplementedError
 
 
 # ---------------------------------------------------------------
@@ -445,20 +494,30 @@ def p_selection_statement_2(t):
 # ---------------------------------------------------------------
 def p_iteration_statement_1(t):
 	'iteration_statement : FOR LPAREN expressionopt SEMI expressionopt SEMI expressionopt RPAREN statement'
-	pass
+	t[0] = (t.lineno(1), Stmt_For(t[3], t[5], t[7], t[9]))
 
 def p_iteration_statement_2(t):
 	'iteration_statement : FOR LPAREN declaration expressionopt SEMI expressionopt RPAREN statement'
-	pass
+	raise NotImplementedError
 
 
 # ---------------------------------------------------------------
 # jump-statement:
 #	return expressionopt ;
+#	break ;
+#	continue ;
 # ---------------------------------------------------------------
-def p_jump_statement(t):
+def p_jump_statement_1(t):
 	'jump_statement : RETURN expressionopt SEMI'
-	pass
+	t[0] = (t.lineno(1), Stmt_Return(t[2].list))
+
+def p_jump_statement_2(t):
+	'jump_statement : BREAK SEMI'
+	t[0] = (t.lineno(1), Stmt_Break())
+
+def p_jump_statement_3(t):
+	'jump_statement : CONTINUE SEMI'
+	t[0] = (t.lineno(1), Stmt_Cont())
 
 
 # ---------------------------------------------------------------
@@ -467,7 +526,7 @@ def p_jump_statement(t):
 # ---------------------------------------------------------------
 def p_compound_statement(t):
 	'compound_statement : LBRACE block_item_listopt RBRACE'
-	pass
+	t[0] = (t.lineno(1), Stmt_Comp(t[2].list))
 
 
 # ---------------------------------------------------------------
@@ -477,11 +536,11 @@ def p_compound_statement(t):
 # ---------------------------------------------------------------
 def p_block_item_listopt_1(t):
 	'block_item_listopt : block_item_list'
-	pass
+	t[0] = t[1]
 
 def p_block_item_listopt_2(t):
 	'block_item_listopt : empty'
-	pass
+	t[0] = myList()
 
 
 # ---------------------------------------------------------------
@@ -491,11 +550,14 @@ def p_block_item_listopt_2(t):
 # ---------------------------------------------------------------
 def p_block_item_list_1(t):
 	'block_item_list : block_item'
-	pass
+	temp = myList()
+	temp.add(t[1])
+	t[0] = temp
 
 def p_block_item_list_2(t):
 	'block_item_list : block_item_list block_item'
-	pass
+	t[1].add(t[2])
+	t[0] = t[1]
 
 
 # ---------------------------------------------------------------
@@ -505,11 +567,11 @@ def p_block_item_list_2(t):
 # ---------------------------------------------------------------
 def p_block_item_1(t):
 	'block_item : declaration'
-	pass
+	t[0] = t[1]
 
 def p_block_item_2(t):
 	'block_item : statement'
-	pass
+	t[0] = t[1]
 
 
 # ---------------------------------------------------------------
@@ -518,7 +580,10 @@ def p_block_item_2(t):
 # ---------------------------------------------------------------
 def p_expression_statement(t):
 	'expression_statement : expressionopt SEMI'
-	pass
+	if t[1] is None:
+		t[0] = (t.lineno(1), Stmt_Mpty())
+	else:
+		t[0] = (t.lineno(1), Stmt_Expr(t[1]))
 
 
 # ---------------------------------------------------------------
@@ -528,25 +593,20 @@ def p_expression_statement(t):
 # ---------------------------------------------------------------
 def p_expressionopt_1(t):
 	'expressionopt : expression'
-	pass
+	t[0] = t[1]
 
 def p_expressionopt_2(t):
 	'expressionopt : empty'
-	pass
+	t[0] = None
 
 
 # ---------------------------------------------------------------
 # expression:
 #	assignment-expression
-#	expression , assignment-expression
 # ---------------------------------------------------------------
 def p_expression_1(t):
 	'expression : assignment_expression'
-	pass
-
-def p_expression_2(t):
-	'expression : expression COMMA assignment_expression'
-	pass
+	t[0] = t[1]
 
 
 # ---------------------------------------------------------------
@@ -556,11 +616,11 @@ def p_expression_2(t):
 # ---------------------------------------------------------------
 def p_assignment_expressionopt_1(t):
 	'assignment_expressionopt : assignment_expression'
-	pass
+	t[0] = t[1]
 
 def p_assignment_expressionopt_2(t):
 	'assignment_expressionopt : empty'
-	pass
+	t[0] = Stmt_Mpty()
 
 
 # ---------------------------------------------------------------
@@ -570,11 +630,11 @@ def p_assignment_expressionopt_2(t):
 # ---------------------------------------------------------------
 def p_assignment_expression_1(t):
 	'assignment_expression : conditional_expression'
-	pass
+	t[0] = t[1]
 
 def p_assignment_expression_2(t):
 	'assignment_expression : unary_expression assignment_operator assignment_expression'
-	pass
+	t[0] = Expr_Bin(BinOp.Asgn, (Expr_Var(t[1]), t[3]))
 
 
 # ---------------------------------------------------------------
@@ -593,6 +653,7 @@ def p_assignment_operator(t):
 # ---------------------------------------------------------------
 def p_conditional_expression(t):
 	'conditional_expression : logical_OR_expression'
+	t[0] = t[1]
 
 
 # ---------------------------------------------------------------
@@ -602,11 +663,11 @@ def p_conditional_expression(t):
 # ---------------------------------------------------------------
 def p_logical_OR_expression_1(t):
 	'logical_OR_expression : logical_AND_expression'
-	pass
+	t[0] = t[1]
 
 def p_logical_OR_expression_2(t):
 	'logical_OR_expression : logical_OR_expression LOR logical_AND_expression'
-	pass
+	t[0] = Expr_Bin(BinOp.Or, (t[1], t[3]))
 
 
 # ---------------------------------------------------------------
@@ -616,11 +677,11 @@ def p_logical_OR_expression_2(t):
 # ---------------------------------------------------------------
 def p_logical_AND_expression_1(t):
 	'logical_AND_expression : inclusive_OR_expression'
-	pass
+	t[0] = t[1]
 
 def p_logical_AND_expression_2(t):
 	'logical_AND_expression : logical_AND_expression LAND inclusive_OR_expression'
-	pass
+	t[0] = Expr_Bin(BinOp.And, (t[1], t[3]))
 
 
 # ---------------------------------------------------------------
@@ -630,11 +691,11 @@ def p_logical_AND_expression_2(t):
 # ---------------------------------------------------------------
 def p_inclusive_OR_expression_1(t):
 	'inclusive_OR_expression : exclusive_OR_expression'
-	pass
+	t[0] = t[1]
 
 def p_inclusive_OR_expression_2(t):
 	'inclusive_OR_expression : inclusive_OR_expression OR exclusive_OR_expression'
-	pass
+	raise NotImplementedError
 
 
 # ---------------------------------------------------------------
@@ -644,11 +705,11 @@ def p_inclusive_OR_expression_2(t):
 # ---------------------------------------------------------------
 def p_exclusive_OR_expression_1(t):
 	'exclusive_OR_expression : AND_expression'
-	pass
+	t[0] = t[1]
 
 def p_exclusive_OR_expression_2(t):
 	'exclusive_OR_expression : exclusive_OR_expression XOR AND_expression'
-	pass
+	raise NotImplementedError
 
 
 # ---------------------------------------------------------------
@@ -658,11 +719,11 @@ def p_exclusive_OR_expression_2(t):
 # ---------------------------------------------------------------
 def p_AND_expression_1(t):
 	'AND_expression : equality_expression'
-	pass
+	t[0] = t[1]
 
 def p_AND_expression_2(t):
 	'AND_expression : AND_expression AND equality_expression'
-	pass
+	raise NotImplementedError
 
 
 # ---------------------------------------------------------------
@@ -673,15 +734,15 @@ def p_AND_expression_2(t):
 # ---------------------------------------------------------------
 def p_equality_expression_1(t):
 	'equality_expression : relational_expression'
-	pass
+	t[0] = t[1]
 
 def p_equality_expression_2(t):
 	'equality_expression : equality_expression EQ relational_expression'
-	pass
+	t[0] = Expr_Bin(BinOp.Eq, t[1], t[3])
 
 def p_equality_expression_3(t):
 	'equality_expression : equality_expression NE relational_expression'
-	pass
+	t[0] = Expr_Bin(BinOp.Ne, t[1], t[3])
 
 
 # ---------------------------------------------------------------
@@ -694,23 +755,23 @@ def p_equality_expression_3(t):
 # ---------------------------------------------------------------
 def p_relational_expression_1(t):
 	'relational_expression : shift_expression'
-	pass
+	t[0] = t[1]
 
 def p_relational_expression_2(t):
 	'relational_expression : relational_expression LT shift_expression'
-	pass
+	t[0] = Expr_Bin(BinOp.Lt, (t[1], t[3]))
 
 def p_relational_expression_3(t):
 	'relational_expression : relational_expression GT shift_expression'
-	pass
+	t[0] = Expr_Bin(BinOp.Gt, (t[1], t[3]))
 
 def p_relational_expression_4(t):
 	'relational_expression : relational_expression LE shift_expression'
-	pass
+	t[0] = Expr_Bin(BinOp.Le, (t[1], t[3]))
 
 def p_relational_expression_5(t):
 	'relational_expression : relational_expression GE shift_expression'
-	pass
+	t[0] = Expr_Bin(BinOp.Ge, (t[1], t[3]))
 
 
 # ---------------------------------------------------------------
@@ -721,15 +782,15 @@ def p_relational_expression_5(t):
 # ---------------------------------------------------------------
 def p_shift_expression_1(t):
 	'shift_expression : additive_expression'
-	pass
+	t[0] = t[1]
 
 def p_shift_expression_2(t):
 	'shift_expression : shift_expression LSHIFT additive_expression'
-	pass
+	raise NotImplementedError
 
 def p_shift_expression_3(t):
 	'shift_expression : shift_expression RSHIFT additive_expression'
-	pass
+	raise NotImplementedError
 
 
 # ---------------------------------------------------------------
@@ -740,15 +801,15 @@ def p_shift_expression_3(t):
 # ---------------------------------------------------------------
 def p_additive_expression_1(t):
 	'additive_expression : multiplicative_expression'
-	pass
+	t[0] = t[1]
 
 def p_additive_expression_2(t):
 	'additive_expression : additive_expression PLUS multiplicative_expression'
-	pass
+	t[0] = Expr_Bin(BinOp.Add, (t[1], t[3]))
 
 def p_additive_expression_3(t):
 	'additive_expression : additive_expression MINUS multiplicative_expression'
-	pass
+	t[0] = Expr_Bin(BinOp.Sub, (t[1], t[3]))
 
 
 # ---------------------------------------------------------------
@@ -760,19 +821,19 @@ def p_additive_expression_3(t):
 # ---------------------------------------------------------------
 def p_multiplicative_expression_1(t):
 	'multiplicative_expression : cast_expression'
-	pass
+	t[0] = t[1]
 
 def p_multiplicative_expression_2(t):
 	'multiplicative_expression : multiplicative_expression TIMES cast_expression'
-	pass
+	t[0] = Expr_Bin(BinOp.Mul, (t[1], t[3]))
 
 def p_multiplicative_expression_3(t):
 	'multiplicative_expression : multiplicative_expression DIVIDE cast_expression'
-	pass
+	t[0] = Expr_Bin(BinOp.Div, (t[1], t[3]))
 
 def p_multiplicative_expression_4(t):
 	'multiplicative_expression : multiplicative_expression MOD cast_expression'
-	pass
+	t[0] = Expr_Bin(BinOp.Mod, (t[1], t[3]))
 
 
 # ---------------------------------------------------------------
@@ -782,11 +843,11 @@ def p_multiplicative_expression_4(t):
 # ---------------------------------------------------------------
 def p_cast_expression_1(t):
 	'cast_expression : unary_expression'
-	pass
+	t[0] = t[1]
 
 def p_cast_expression_2(t):
 	'cast_expression : LPAREN type_name RPAREN cast_expression'
-	pass
+	raise NotImplementedError
 
 
 # ---------------------------------------------------------------
@@ -800,19 +861,21 @@ def p_cast_expression_2(t):
 # ---------------------------------------------------------------
 def p_unary_expression_1(t):
 	'unary_expression : postfix_expression'
-	pass
+	t[0] = t[1]
 
 def p_unary_expression_2(t):
 	'unary_expression : INCREMENT unary_expression'
-	pass
+	t[0] = Expr_Un(UnOp.Inc, t[2])
 
 def p_unary_expression_3(t):
 	'unary_expression : DECREMENT unary_expression'
-	pass
+	t[0] = Expr_Un(UnOp.Dec, t[2])
 
 def p_unary_expression_4(t):
 	'unary_expression : unary_operator cast_expression'
-	pass
+	if t[1] == 'TIMES':
+		t[0] = Expr_Un(UnOp.Deref, t[2])
+	else: raise NotImplementedError 
 
 
 # ---------------------------------------------------------------
@@ -832,7 +895,7 @@ def p_unary_operator(t):
                       | NOT
                       | LNOT
                       '''
-	pass
+	t[0] = t[1]
 
 
 # ---------------------------------------------------------------
@@ -849,31 +912,32 @@ def p_unary_operator(t):
 # ---------------------------------------------------------------
 def p_postfix_expression_1(t):
 	'postfix_expression : primary_expression'
-	pass
+	t[0] = t[1]
 
 def p_postfix_expression_2(t):
 	'postfix_expression : postfix_expression LBRACKET expression RBRACKET'
-	pass
+	if len(t[3].list) != 1 : raise NotImplementedError
+	t[0] = Expr_Bin(BinOp.Idx, (Expr_Var(t[1]), t[3].list[0]))
 
 def p_postfix_expression_3(t):
 	'postfix_expression : postfix_expression LPAREN argument_expression_listopt RPAREN'
-	pass
+	t[0] = Expr_Call(t[1], t[3].list)
 
 def p_postfix_expression_4(t):
 	'postfix_expression : postfix_expression INCREMENT'
-	pass
+	t[0] = Expr_Un(UnOp.Inc, t[1])
 
 def p_postfix_expression_5(t):
 	'postfix_expression : postfix_expression DECREMENT'
-	pass
+	t[0] = Expr_Un(UnOp.Inc, t[1])
 
 def p_postfix_expression_6(t):
 	'postfix_expression : LPAREN type_name RPAREN LBRACKET initializer_list RBRACKET'
-	pass
+	raise NotImplementedError
 
 def p_postfix_expression_7(t):
 	'postfix_expression : LPAREN type_name RPAREN LBRACKET initializer_list COMMA RBRACKET'
-	pass
+	raise NotImplementedError
 
 
 # ---------------------------------------------------------------
@@ -883,13 +947,17 @@ def p_postfix_expression_7(t):
 #	string-literal
 #	( expression )
 # ---------------------------------------------------------------
-def p_primary_expression(t):
+def p_primary_expression_1(t):
 	'''primary_expression : ID
                           | constant
                           | STRING
-                          | LPAREN expression RPAREN
                           '''
-	pass
+	t[0] = t[1]
+def p_primary_expression_2(t):
+	'primary_expression : LPAREN expression RPAREN'	
+	if len(t[2].list) != 1: raise NotImplementedError
+	t[0] = t[2].list[0]
+
 
 
 # ---------------------------------------------------------------
@@ -899,11 +967,11 @@ def p_primary_expression(t):
 # ---------------------------------------------------------------
 def p_argument_expression_listopt_1(t):
 	'argument_expression_listopt : argument_expression_list'
-	pass
+	t[0] = t[1]
 
 def p_argument_expression_listopt_2(t):
 	'argument_expression_listopt : empty'
-	pass
+	t[0] = myList()
 
 
 # ---------------------------------------------------------------
@@ -913,21 +981,30 @@ def p_argument_expression_listopt_2(t):
 # ---------------------------------------------------------------
 def p_argument_expression_list_1(t):
 	'argument_expression_list : assignment_expression'
-	pass
+	temp = myList()
+	temp.add(t[1])
+	t[0] = temp
 
 def p_argument_expression_list_2(t):
 	'argument_expression_list : argument_expression_list COMMA assignment_expression'
-	pass
+	t[1].add(t[3])
+	t[0] = t[1]
 
 
 # ---------------------------------------------------------------
 # constant 
 # ---------------------------------------------------------------
-def p_constant(t):
-	'''constant : INUM
-                | FNUM
-                | CHARACTER'''
-	pass
+def p_constant_1(t):
+	'constant : INUM'
+	t[0] = Expr_Lit(int(t[1]))
+
+def p_constant_2(t):
+	'constant : FNUM'
+	t[0] = Expr_Lit(float(t[1]))
+
+def p_constant_3(t):
+	'constant : CHARACTER'
+	raise NotImplementedError
 
 
 # ---------------------------------------------------------------
@@ -950,11 +1027,13 @@ def p_error(t):
 # ---------------------------------------------------------------
 parser = yacc.yacc()
 
-
+def parse(code):
+	return parser.parse(code, lexer=Lexer.lexer)
 
 # ---------------------------------------------------------------
 if __name__ == '__main__':
 	import sys
 	f = open(sys.argv[1], 'r')
 	code = f.read()
-	parser.parse(code, debug = True, lexer = Lexer.lexer)
+	p = parser.parse(code, debug = True, lexer = Lexer.lexer)
+	print(p)

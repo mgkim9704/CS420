@@ -17,6 +17,12 @@ class Context(NamedTuple):
   env: Dict[str, int]
   mem: List[Value]
 
+def b2v(b: bool) -> Value:
+  return 1 if b else 0
+
+def v2b(v: Value) -> bool:
+  return (v != 0)
+
 class Interpreter:
 
   # some evaluation context
@@ -37,7 +43,7 @@ class Interpreter:
   def run(self) -> Value:
     return self.eval_func('main', [])
 
-  def eval_stmt(self, stmt: ast.Stmt) -> \
+  def eval_stmt(self, stmt: ast.SpannedStmt) -> \
     Generator[Context, None, Tuple[CFD, Optional[Value]]]:
 
     # before actually evaluate statements,
@@ -45,8 +51,12 @@ class Interpreter:
     print (stmt)
     yield self.ctx
 
-    if isinstance(stmt, ast.Stmt_For):
-      init, cond, loop, body = stmt
+    if isinstance(stmt, ast.Stmt_Comp):
+      body = stmt.body
+      return (yield from self.eval_block(body))
+
+    elif isinstance(stmt, ast.Stmt_For):
+      init, cond, loop, (ln, body) = stmt
       if init is not None:
         yield from self.eval_expr(init)
 
@@ -62,7 +72,7 @@ class Interpreter:
         if vcond == 0:
           break
 
-        cfd, ret = yield from self.eval_block(body)
+        cfd, ret = yield from self.eval_stmt(body)
         if cfd == CFD.Break:
           return (CFD.Go, None)
         elif cfd == CFD.Return:
@@ -75,10 +85,10 @@ class Interpreter:
       return (CFD.Go, None)
     
     elif isinstance(stmt, ast.Stmt_If):
-      cond, body = stmt
+      cond, (ln, body) = stmt
       vcond = yield from self.eval_expr(cond)
       if vcond != 0:
-        return (yield from self.eval_block(body))
+        return (yield from self.eval_stmt(body))
       else:
         return (CFD.Go, None)
     
@@ -108,10 +118,10 @@ class Interpreter:
       return (CFD.Return, vret)
     
     
-  def eval_block(self, block: List[ast.Stmt]) -> \
+  def eval_block(self, block: List[ast.SpannedStmt]) -> \
     Generator[Context, None, Tuple[CFD, Optional[Value]]]:
     
-    for stmt in block:
+    for ln, stmt in block:
       cfd, ret = yield from self.eval_stmt(stmt)
       if cfd != CFD.Go:
         return (cfd, ret)
@@ -139,7 +149,7 @@ class Interpreter:
     beforeenv = self.ctx.env
     self.ctx = Context(newenv, self.ctx.mem)
 
-    cfd, ret = yield from self.eval_block(f.body)
+    cfd, ret = yield from self.eval_stmt(f.body[1])
 
     if ret == None:
       assert cfd != CFD.Return
@@ -211,14 +221,25 @@ class Interpreter:
       return v1 * v2
     elif op == ast.BinOp.Div:
       return v1 / v2
+    elif op == ast.BinOp.Mod:
+      return v1 % v2
+    elif op == ast.BinOp.Eq:
+      return v1 == v2
+    elif op == ast.BinOp.Ne:
+      return v1 != v2
+    elif op == ast.BinOp.Lt:
+      return b2v(v1 < v2)
     elif op == ast.BinOp.Gt:
-      return 1 if v1 > v2 else 0
+      return b2v(v1 > v2)
     elif op == ast.BinOp.Le:
-      return 1 if v1 < v2 else 0
+      return b2v(v1 <= v2)
+    elif op == ast.BinOp.Ge:
+      return b2v(v1 >= v2)
+    # todo: short-circuit
     elif op == ast.BinOp.And:
-      return v1 and v2
+      return b2v(v2b(v1) and v2b(v2))
     elif op == ast.BinOp.Or:
-      return v1 or v2
+      return b2v(v2b(v1) or v2b(v2))
     elif op == ast.BinOp.Asgn:
       if isinstance(e1, ast.Expr_Var):
         v = yield from self.eval_expr(e2)
@@ -257,12 +278,12 @@ class Interpreter:
 #######################################################################
 
 def test1():
-  ex = ast.Func('test', [], ast.Type.Int, False, [ast.Stmt_Return(ast.Expr_Lit(3))])
+  ex = ast.Func('test', [], ast.Type.Int, False, ast.Stmt_Comp([ast.Stmt_Return(ast.Expr_Lit(3))]))
   myint = Interpreter([ex])
   print(myint.eval_func('test', []))
 
 def test2():
-  ex = ast.Func('test', [], ast.Type.Int, False, [ast.Stmt_Return(ast.Expr_Bin(ast.BinOp.Add, (ast.Expr_Lit(1), ast.Expr_Lit(4))))])
+  ex = ast.Func('test', [], ast.Type.Int, False, ast.Stmt_Comp([ast.Stmt_Return(ast.Expr_Bin(ast.BinOp.Add, (ast.Expr_Lit(1), ast.Expr_Lit(4))))]))
   myint = Interpreter([ex])
   print(myint.eval_func('test', []))
 
@@ -288,7 +309,7 @@ def fact():
 tests = [test1, test2, test3, cfd_if, fact]
 
 def loadTest():
-  ex = ast.Func('fact', [(ast.Type.Int, ast.DecoratedName('x', False))], ast.Type.Int, False, [ast.Stmt_If(ast.Expr_Bin(ast.BinOp.Le, (ast.Expr_Var('x'), ast.Expr_Lit(2))), [ast.Stmt_Return(ast.Expr_Var('x'))]), ast.Stmt_Return(ast.Expr_Bin(ast.BinOp.Mul, (ast.Expr_Var('x'), ast.Expr_Call('fact', [ast.Expr_Bin(ast.BinOp.Sub, (ast.Expr_Var('x'), ast.Expr_Lit(1)))]))))])
+  ex = ast.Func('fact', [(ast.Type.Int, ast.DecoratedName('x', False))], ast.Type.Int, False, ast.Stmt_Comp([ast.Stmt_If(ast.Expr_Bin(ast.BinOp.Le, (ast.Expr_Var('x'), ast.Expr_Lit(2))), ast.Stmt_Comp([ast.Stmt_Return(ast.Expr_Var('x'))])), ast.Stmt_Return(ast.Expr_Bin(ast.BinOp.Mul, (ast.Expr_Var('x'), ast.Expr_Call('fact', [ast.Expr_Bin(ast.BinOp.Sub, (ast.Expr_Var('x'), ast.Expr_Lit(1)))]))))]))
 
   myint = Interpreter([ex])
   return myint

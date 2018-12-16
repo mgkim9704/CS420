@@ -11,3 +11,4 @@
 
 * test.c: test code which is provided by TA
 
+* main.py: You can test parser + interpreter by `python3 main.py <filename> [function-name] [arguments]`.

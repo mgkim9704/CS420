@@ -4,7 +4,7 @@
 from typing import List, Union, NamedTuple, Optional, NewType, Tuple
 from enum import Enum
 
-BinOp = Enum('BinOp', 'Add Sub Mul Div Gt Le Asgn Idx And Or')
+BinOp = Enum('BinOp', 'Add Sub Mul Div Mod Eq Ne Lt Gt Le Ge Asgn Idx And Or')
 UnOp = Enum('UnOp', 'Inc Dec Deref')
 
 Type = Enum('Type', 'Int Float')
@@ -32,15 +32,18 @@ class Expr_Call(NamedTuple):
 
 Expr = Union[Expr_Var, Expr_Lit, Expr_Bin, Expr_Un, Expr_Call]
 
+class Stmt_Comp(NamedTuple):
+  body: List['SpannedStmt']
+
 class Stmt_For(NamedTuple):
   init: Optional[Expr]
   cond: Optional[Expr]
   loop: Optional[Expr]
-  body: List['Stmt']
+  body: 'SpannedStmt'
 
 class Stmt_If(NamedTuple):
   cond: Expr
-  body: List['Stmt']
+  body: 'SpannedStmt'
 
 class Stmt_Decl(NamedTuple):
   basetype: Type
@@ -62,7 +65,7 @@ class Stmt_Mpty:
   pass
 
 # first elem of tuple means the line number of this statement.
-Stmt = Tuple[int, Union[Stmt_For, Stmt_If, Stmt_Return, Stmt_Decl, Stmt_Break, Stmt_Cont, Stmt_Expr, Stmt_Mpty]]
+SpannedStmt = Tuple[int, Union[Stmt_Comp, Stmt_For, Stmt_If, Stmt_Return, Stmt_Decl, Stmt_Break, Stmt_Cont, Stmt_Expr, Stmt_Mpty]]
 
 class Func(NamedTuple):
   name: str
@@ -70,6 +73,6 @@ class Func(NamedTuple):
   # 'void' => None
   ret_type: Optional[Type]
   ret_type_is_pointer: bool
-  body: List[Stmt]
+  body: Tuple[int, Stmt_Comp]
 
 Program = List[Func]
