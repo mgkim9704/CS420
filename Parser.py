@@ -494,7 +494,7 @@ def p_selection_statement_2(t):
 # ---------------------------------------------------------------
 def p_iteration_statement_1(t):
 	'iteration_statement : FOR LPAREN expressionopt SEMI expressionopt SEMI expressionopt RPAREN statement'
-	t[0] = (t.lineno(1), Stmt_For(t[3], t[5], t[7], t[9]))
+	t[0] = (t.lineno(1), Stmt_For(t[3].list, t[5].list, t[7].list, t[9]))
 
 def p_iteration_statement_2(t):
 	'iteration_statement : FOR LPAREN declaration expressionopt SEMI expressionopt RPAREN statement'
@@ -580,10 +580,7 @@ def p_block_item_2(t):
 # ---------------------------------------------------------------
 def p_expression_statement(t):
 	'expression_statement : expressionopt SEMI'
-	if t[1] is None:
-		t[0] = (t.lineno(1), Stmt_Mpty())
-	else:
-		t[0] = (t.lineno(1), Stmt_Expr(t[1]))
+	t[0] = (t.lineno(1), Stmt_Expr(t[1].list))
 
 
 # ---------------------------------------------------------------
@@ -597,15 +594,27 @@ def p_expressionopt_1(t):
 
 def p_expressionopt_2(t):
 	'expressionopt : empty'
-	t[0] = None
+	temp = myList()
+	temp.add((t.lineno(1), Stmt_Mpty()))
+	t[0] = temp
 
 
 # ---------------------------------------------------------------
 # expression:
 #	assignment-expression
+#	expression , assignment-expression
 # ---------------------------------------------------------------
 def p_expression_1(t):
 	'expression : assignment_expression'
+	temp = myList()
+	if t[1] is not None:
+		temp.add(t[1])
+	t[0] = temp
+
+def p_expression_2(t):
+	'expression : expression COMMA assignment_expression'
+	NotImplementedError
+	t[1].add(t[3])
 	t[0] = t[1]
 
 
@@ -1027,8 +1036,7 @@ def p_error(t):
 # ---------------------------------------------------------------
 parser = yacc.yacc()
 
-def parse(code):
-	return parser.parse(code, lexer=Lexer.lexer)
+
 
 # ---------------------------------------------------------------
 if __name__ == '__main__':
