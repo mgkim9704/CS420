@@ -494,7 +494,9 @@ def p_selection_statement_2(t):
 # ---------------------------------------------------------------
 def p_iteration_statement_1(t):
 	'iteration_statement : FOR LPAREN expressionopt SEMI expressionopt SEMI expressionopt RPAREN statement'
-	t[0] = (t.lineno(1), Stmt_For(t[3].list, t[5].list, t[7].list, t[9]))
+	if len(t[3].list)!=1 or len(t[5].list)!=1 or len(t[7].list)!=1:
+		raise NotImplementedError
+	t[0] = (t.lineno(1), Stmt_For(t[3].list[0], t[5].list[0], t[7].list[0], t[9]))
 
 def p_iteration_statement_2(t):
 	'iteration_statement : FOR LPAREN declaration expressionopt SEMI expressionopt RPAREN statement'
