@@ -28,9 +28,14 @@ class Interpreter:
 
   # run the given program
   # return: the return value of main function
-  #def run(self) -> Value:
-  #  return self.eval_func('main', [])
-
+  def run(self) -> Value:
+    evaluation = self.eval_func('main', [])
+    while True:
+      try:
+        next(evaluation)
+      except StopIteration as e:
+        return e.value
+    
   def eval_stmt(self, stmt: ast.Stmt) -> \
     Generator[Context, None, Tuple[CFD, Optional[Value]]]:
 
