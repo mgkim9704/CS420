@@ -17,11 +17,20 @@ class Type_Array(NamedTuple):
   size: int
 
 Type = Union[BaseType, Type_Ptr, Type_Array]
+TypedValue = Tuple[Type, Value]
 
 Program = Dict[str, ast.Func]
 
 # Control Flow Directive
 CFD = Enum('CFD', 'Break Continue Return Go')
+
+def get_type(bt: BaseType, deco: Union[bool, int]) -> Type:
+  if deco is False:
+    return bt
+  elif deco is True:
+    return Type_Ptr(bt)
+  else:
+    return Type_Array(bt, deco)
 
 class InterpreterError(Exception):
 
@@ -41,9 +50,13 @@ class Context():
     # None means 'not assgined yet'
     if var_name in self.env:
       raise InterpreterError(f'{var_name} is already declared vairable.')
-        
-    self.mem.append(None)
-    self.env[var_name] = (len(self.mem) - 1, t)
+      
+    addr = len(self.mem)
+    if isinstance(t, Type_Array):
+      self.mem += [None] * t.size
+    else:
+      self.mem.append(None)
+    self.env[var_name] = (addr, t)
 
   def assign(self, var_name: str, value: Value):
     x, t = self.env[var_name]

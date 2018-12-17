@@ -11,14 +11,6 @@ def b2v(b: bool) -> Value:
 def v2b(v: Value) -> bool:
   return (v != 0)
 
-def get_type(bt: BaseType, deco: Union[bool, int]) -> Type:
-  if deco is False:
-    return bt
-  elif deco is True:
-    return Type_Ptr(bt)
-  else:
-    return Type_Array(bt, deco)
-
 class Interpreter:
 
   # some evaluation context
@@ -132,7 +124,6 @@ class Interpreter:
     if len(f.arguments) != len(args):
       raise InterpreterError(f'function {name} requires {len(f.arguments)} arguments, but you\'re calling with {len(args)} arguments.')
 
-    fp = len(self.ctx.mem) # frame point
     frame = self.ctx.new_frame()
     for (tp, (arg_name, _)), arg in zip(f.arguments, args):
       if not isinstance(arg, {ast.Type.Int: int, ast.Type.Float: float}[tp]):
@@ -198,9 +189,22 @@ class Interpreter:
     else:
       raise NotImplementedError
 
+  def eval_lvalue(self, expr: ast.Expr) -> Evaluation[int]:
+    if isinstance(expr, ast.Expr_Var):
+      addr, t = self.ctx.env[expr]
+      return addr
+    elif isinstance(expr, ast.Expr_Bin):
+      op, (e1, e2) = expr
+      if op == ast.BinOp.Idx:
+        baseaddr = yield from self.eval_expr(e1)
+        delta = yield from self.eval_expr(e2)
+        return baseaddr + delta
+    
+    raise InterpreterError(f'{expr} is not a l-value.')
+
   def binop(self, op: ast.BinOp, e1: ast.Expr, e2: ast.Expr) -> \
     Evaluation[Value]:
-    if op != ast.BinOp.Asgn:
+    if op != ast.BinOp.Asgn and op != ast.BinOp.Idx:
       v1 = yield from self.eval_expr(e1)
       v2 = yield from self.eval_expr(e2)
 
@@ -232,14 +236,20 @@ class Interpreter:
     elif op == ast.BinOp.Or:
       return b2v(v2b(v1) or v2b(v2))
     elif op == ast.BinOp.Asgn:
+      addr = yield from self.eval_lvalue(e1)
+      v = yield from self.eval_expr(e2)
+      self.ctx.mem[addr] = v
+      return v
+
+    elif op == ast.BinOp.Idx:
       if isinstance(e1, ast.Expr_Var):
         v = yield from self.eval_expr(e2)
-        self.ctx.assign(e1, v)
-        return v
+        addr, _ = self.ctx.env[e1]
+        return self.ctx.mem[addr + v]
       else:
-        raise InterpreterError(f'{e1} is not a l-value.')
-    else:
-      raise NotImplementedError
+        raise NotImplementedError
+    
+    raise NotImplementedError
   
   def unop(self, op: ast.UnOp, e: ast.Expr) -> Evaluation[Value]:
     
