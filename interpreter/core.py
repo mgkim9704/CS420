@@ -13,6 +13,12 @@ Program = Dict[str, ast.Func]
 # Control Flow Directive
 CFD = Enum('CFD', 'Break Continue Return Go')
 
+class InterpreterError(Exception):
+
+  message: str
+  def __init__(self, message):
+    self.message = message
+
 class Context(NamedTuple):
   env: Dict[str, int]
   mem: List[Value]
@@ -35,15 +41,15 @@ class Interpreter:
 
     for f in p:
       if f.name in self.program:
-        raise f'Duplicated function {f.name}'
+        raise InterpreterError(f'Duplicated function {f.name}')
       self.program[f.name] = f
 
   # run the given program
   # return: the return value of main function
-  def run(self) -> Value:
-    return self.eval_func('main', [])
+  #def run(self) -> Value:
+  #  return self.eval_func('main', [])
 
-  def eval_stmt(self, stmt: ast.SpannedStmt) -> \
+  def eval_stmt(self, stmt: ast.Stmt) -> \
     Generator[Context, None, Tuple[CFD, Optional[Value]]]:
 
     # before actually evaluate statements,
@@ -96,7 +102,7 @@ class Interpreter:
       tp, names = stmt
       for name, _ in names:
         if name in self.ctx.env:
-          raise f'{name} is already declared vairable.'
+          raise InterpreterError(f'{name} is already declared vairable.')
         
         self.ctx.mem.append(0xcc)
         self.ctx.env[name] = len(self.ctx.mem) - 1
@@ -132,16 +138,15 @@ class Interpreter:
     Generator[Context, None, Value]:
     f = self.program[name]
     if len(f.arguments) != len(args):
-      raise f'function {name} requires {len(f.arguments)} arguments, but' + \
-        f'you\'re calling with {len(args)} arguments.'
+      raise InterpreterError(f'function {name} requires {len(f.arguments)} arguments, but you\'re calling with {len(args)} arguments.')
 
     newenv: Dict[str, int] = {}
     fp = len(self.ctx.mem) # frame point
     for (tp, (arg_name, _)), arg in zip(f.arguments, args):
       if not isinstance(arg, {ast.Type.Int: int, ast.Type.Float: float}[tp]):
-        raise f'{arg} doesn\'t have type {tp}.'
+        raise InterpreterError(f'{arg} doesn\'t have type {tp}.')
       if arg in newenv:
-        raise f'function {name} has duplicated arguments.'
+        raise InterpreterError(f'function {name} has duplicated arguments.')
 
       self.ctx.mem.append(arg)
       newenv[arg_name] = len(self.ctx.mem) - 1
@@ -153,7 +158,7 @@ class Interpreter:
 
     if ret == None:
       assert cfd != CFD.Return
-      raise f'function {name} stopped with unexpected control flow directive.'
+      raise InterpreterError(f'function {name} stopped with unexpected control flow directive.')
 
     del self.ctx.mem[fp:]
     self.ctx = Context(beforeenv, self.ctx.mem)
@@ -166,7 +171,7 @@ class Interpreter:
 
     elif isinstance(expr, ast.Expr_Lit):
       if isinstance(expr.val, str):
-        raise 'You cannot use string literal but in printf function.'
+        raise InterpreterError('You cannot use string literal but in printf function.')
       val = expr.val
       return val
     
@@ -185,7 +190,7 @@ class Interpreter:
         args = args[1:]
 
         if not isinstance(fstr, str):
-          raise 'First argument of printf function must be a string literal.'
+          raise InterpreterError('First argument of printf function must be a string literal.')
 
         vargs = []
         for arg in args:
@@ -205,7 +210,7 @@ class Interpreter:
         return (yield from self.eval_func(name, vargs))
     
     else:
-      raise ''
+      raise NotImplementedError
 
   def binop(self, op: ast.BinOp, e1: ast.Expr, e2: ast.Expr) -> \
     Generator[Context, None, Value]:
@@ -246,9 +251,9 @@ class Interpreter:
         self.ctx.mem[self.ctx.env[e1]] = v
         return v
       else:
-        raise f'{e1} is not a l-value.'
+        raise InterpreterError(f'{e1} is not a l-value.')
     else:
-      raise ''
+      raise NotImplementedError
   
   def unop(self, op: ast.UnOp, e: ast.Expr) -> Generator[Context, None, Value]:
     
@@ -258,7 +263,7 @@ class Interpreter:
         self.ctx.mem[self.ctx.env[e]] = v + 1
         return v
       else:
-        raise f'{e} is not a l-value.'
+        raise InterpreterError(f'{e} is not a l-value.')
 
     elif op == ast.UnOp.Dec:
       if isinstance(e, ast.Expr_Var):
@@ -266,10 +271,10 @@ class Interpreter:
         self.ctx.mem[self.ctx.env[e]] = v - 1
         return v
       else:
-        raise f'{e} is not a l-value.'
+        raise InterpreterError(f'{e} is not a l-value.')
 
     else:
-      raise ''
+      raise NotImplementedError
 
     yield
 

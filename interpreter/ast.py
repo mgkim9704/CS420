@@ -65,8 +65,8 @@ class Stmt_Mpty:
   pass
 
 # first elem of tuple means the line number of this statement.
-SpannedStmt = Tuple[int, Union[Stmt_Comp, Stmt_For, Stmt_If, Stmt_Return, Stmt_Decl, Stmt_Break, Stmt_Cont, Stmt_Expr, Stmt_Mpty]]
-
+Stmt = Union[Stmt_Comp, Stmt_For, Stmt_If, Stmt_Return, Stmt_Decl, Stmt_Break, Stmt_Cont, Stmt_Expr, Stmt_Mpty]
+SpannedStmt = Tuple[int, Stmt]
 class Func(NamedTuple):
   name: str
   arguments: List[Tuple[Type, DecoratedName]]
