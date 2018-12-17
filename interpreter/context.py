@@ -1,7 +1,7 @@
 # interpreter/context.py
 # Intermediate outcomes under evaluation
 
-from typing import NamedTuple, Union, Dict, List
+from typing import NamedTuple, Union, Dict, List, Tuple, Optional
 from enum import Enum
 from . import ast
 
@@ -30,5 +30,13 @@ class InterpreterError(Exception):
     self.message = message
 
 class Context(NamedTuple):
-  env: Dict[str, int]
-  mem: List[Value]
+  env: Dict[str, Tuple[int, Type]]
+  mem: List[Optional[Value]]
+
+  def add(self, var_name: str, t: Type):
+    # None means 'not assgined yet'
+    if var_name in self.env:
+      raise InterpreterError(f'{var_name} is already declared vairable.')
+        
+    self.mem.append(None)
+    self.env[var_name] = (len(self.mem) - 1, t)

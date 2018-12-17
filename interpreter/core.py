@@ -11,6 +11,14 @@ def b2v(b: bool) -> Value:
 def v2b(v: Value) -> bool:
   return (v != 0)
 
+def get_type(bt: BaseType, deco: Union[bool, int]) -> Type:
+  if deco is False:
+    return bt
+  elif deco is True:
+    return Type_Ptr(bt)
+  else:
+    return Type_Array(bt, deco)
+
 class Interpreter:
 
   # some evaluation context
@@ -86,14 +94,11 @@ class Interpreter:
         return (CFD.Go, None)
     
     elif isinstance(stmt, ast.Stmt_Decl):
-      tp, names = stmt
-      for name, _ in names:
-        if name in self.ctx.env:
-          raise InterpreterError(f'{name} is already declared vairable.')
+      basetype, names = stmt
+      for name, deco in names:
+        t = get_type(basetype, deco)
+        self.ctx.add(name, t)
         
-        self.ctx.mem.append(0xcc)
-        self.ctx.env[name] = len(self.ctx.mem) - 1
-
       return (CFD.Go, None)
     
     elif isinstance(stmt, ast.Stmt_Expr):
