@@ -1036,6 +1036,9 @@ def p_error(t):
 # ---------------------------------------------------------------
 parser = yacc.yacc()
 
+def parse(code):
+	return parser.parse(code, lexer = Lexer.lexer)
+
 
 
 # ---------------------------------------------------------------
