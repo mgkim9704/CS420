@@ -2,26 +2,8 @@
 # Interpeter of our language
 
 from typing import Dict, TypeVar, Union, Generic, List, Optional, Tuple, Generator, NamedTuple
-from enum import Enum
 from . import ast
-
-Value = Union[int, float]
-T = TypeVar('T', int, float)
-
-Program = Dict[str, ast.Func]
-
-# Control Flow Directive
-CFD = Enum('CFD', 'Break Continue Return Go')
-
-class InterpreterError(Exception):
-
-  message: str
-  def __init__(self, message):
-    self.message = message
-
-class Context(NamedTuple):
-  env: Dict[str, int]
-  mem: List[Value]
+from .context import *
 
 def b2v(b: bool) -> Value:
   return 1 if b else 0
