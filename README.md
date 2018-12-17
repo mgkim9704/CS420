@@ -11,4 +11,5 @@
 
 * test.c: test code which is provided by TA
 
-* main.py: You can test parser + interpreter by `python3 main.py <filename> [function-name] [arguments]`.
+* main.py: You can run parser + interpreter by `python3 main.py <filename> [function-name] [arguments]`.
+* test.py: You can test parser and iterpreter by `python3 test.py <testname>`. Tests are listed in `tests` folder.
