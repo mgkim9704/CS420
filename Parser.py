@@ -2,7 +2,7 @@
 # Parser.py
 # ----------------------------------------------------------------------
 
-import sys
+import sys, codecs
 import yacc
 import Lexer
 from interpreter.ast import *
@@ -950,7 +950,7 @@ def p_postfix_expression_7(t):
 def p_primary_expression_1(t):
 	'''primary_expression : ID
                           | constant
-                          | STRING
+                          | string_literal
                           '''
 	t[0] = t[1]
 def p_primary_expression_2(t):
@@ -958,6 +958,9 @@ def p_primary_expression_2(t):
 	if len(t[2].list) != 1: raise NotImplementedError
 	t[0] = t[2].list[0]
 
+def p_string_literal(t):
+	'string_literal : STRING'
+	t[0] = Expr_Lit(codecs.decode(t[1][1:-1], encoding='unicode_escape'))
 
 
 # ---------------------------------------------------------------

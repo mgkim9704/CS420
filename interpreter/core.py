@@ -189,7 +189,7 @@ class Interpreter:
         fstr = args[0]
         args = args[1:]
 
-        if not isinstance(fstr, str):
+        if not isinstance(fstr, ast.Expr_Lit) or not isinstance(fstr.val, str):
           raise InterpreterError('First argument of printf function must be a string literal.')
 
         vargs = []
@@ -197,7 +197,7 @@ class Interpreter:
           varg = yield from self.eval_expr(arg)
           vargs.append(varg)
         
-        s = fstr % tuple(vargs)
+        s = fstr.val % tuple(vargs)
         print(s)
         return len(s)
 
