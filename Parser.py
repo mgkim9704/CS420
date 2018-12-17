@@ -596,6 +596,7 @@ def p_expressionopt_2(t):
 	'expressionopt : empty'
 	temp = myList()
 	temp.add((t.lineno(1), Stmt_Mpty()))
+	t[0] = temp
 
 
 # ---------------------------------------------------------------
@@ -1039,7 +1040,9 @@ def p_error(t):
 parser = yacc.yacc()
 
 def parse(code):
-	return parser.parse(code, lexer=Lexer.lexer)
+	return parser.parse(code, lexer = Lexer.lexer)
+
+
 
 # ---------------------------------------------------------------
 if __name__ == '__main__':
