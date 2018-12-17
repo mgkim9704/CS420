@@ -580,7 +580,8 @@ def p_block_item_2(t):
 # ---------------------------------------------------------------
 def p_expression_statement(t):
 	'expression_statement : expressionopt SEMI'
-	t[0] = (t.lineno(1), Stmt_Expr(t[1].list))
+	if len(t[1].list) != 1: raise NotImplementedError
+	t[0] = (t.lineno(1), Stmt_Expr(t[1].list[0]))
 
 
 # ---------------------------------------------------------------
@@ -613,9 +614,9 @@ def p_expression_1(t):
 
 def p_expression_2(t):
 	'expression : expression COMMA assignment_expression'
-	NotImplementedError
-	t[1].add(t[3])
-	t[0] = t[1]
+	raise NotImplementedError
+#	t[1].add(t[3])
+#	t[0] = t[1]
 
 
 # ---------------------------------------------------------------
