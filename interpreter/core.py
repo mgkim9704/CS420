@@ -240,7 +240,7 @@ class Interpreter:
     elif op == ast.BinOp.Asgn:
       if isinstance(e1, ast.Expr_Var):
         v = yield from self.eval_expr(e2)
-        self.ctx.mem[self.ctx.env[e1]] = v
+        self.ctx.assign(e1, v)
         return v
       else:
         raise InterpreterError(f'{e1} is not a l-value.')

@@ -40,3 +40,8 @@ class Context(NamedTuple):
         
     self.mem.append(None)
     self.env[var_name] = (len(self.mem) - 1, t)
+
+  def assign(self, var_name: str, value: Value):
+    x, t = self.env[var_name]
+    self.mem[x] = value
+    
