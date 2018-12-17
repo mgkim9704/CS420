@@ -27,7 +27,7 @@ class Interpreter:
 
   def __init__(self, p: ast.Program) -> None:
     self.program = {}
-    self.ctx = Context({}, [])
+    self.ctx = Context()
 
     for f in p:
       if f.name in self.program:
@@ -45,7 +45,7 @@ class Interpreter:
         return e.value
     
   def eval_stmt(self, stmt: ast.Stmt) -> \
-    Generator[Context, None, Tuple[CFD, Optional[Value]]]:
+    Evaluation[Tuple[CFD, Optional[Value]]]:
 
     # before actually evaluate statements,
     # yield our context.
@@ -117,7 +117,7 @@ class Interpreter:
     
     
   def eval_block(self, block: List[ast.SpannedStmt]) -> \
-    Generator[Context, None, Tuple[CFD, Optional[Value]]]:
+    Evaluation[Tuple[CFD, Optional[Value]]]:
     
     for ln, stmt in block:
       cfd, ret = yield from self.eval_stmt(stmt)
@@ -127,24 +127,19 @@ class Interpreter:
     return (CFD.Go, None)
 
   def eval_func(self, name: str, args: List[Value]) -> \
-    Generator[Context, None, Value]:
+    Evaluation[Value]:
     f = self.program[name]
     if len(f.arguments) != len(args):
       raise InterpreterError(f'function {name} requires {len(f.arguments)} arguments, but you\'re calling with {len(args)} arguments.')
 
-    newenv: Dict[str, int] = {}
     fp = len(self.ctx.mem) # frame point
+    frame = self.ctx.new_frame()
     for (tp, (arg_name, _)), arg in zip(f.arguments, args):
       if not isinstance(arg, {ast.Type.Int: int, ast.Type.Float: float}[tp]):
         raise InterpreterError(f'{arg} doesn\'t have type {tp}.')
-      if arg in newenv:
-        raise InterpreterError(f'function {name} has duplicated arguments.')
 
-      self.ctx.mem.append(arg)
-      newenv[arg_name] = len(self.ctx.mem) - 1
-
-    beforeenv = self.ctx.env
-    self.ctx = Context(newenv, self.ctx.mem)
+      self.ctx.add(arg_name, tp)
+      self.ctx.assign(arg_name, arg)
 
     cfd, ret = yield from self.eval_stmt(f.body[1])
 
@@ -152,14 +147,13 @@ class Interpreter:
       assert cfd != CFD.Return
       raise InterpreterError(f'function {name} stopped with unexpected control flow directive.')
 
-    del self.ctx.mem[fp:]
-    self.ctx = Context(beforeenv, self.ctx.mem)
+    self.ctx.restore_frame(frame)
     return ret
   
-  def eval_expr(self, expr: ast.Expr) -> Generator[Context, None, Value]:
+  def eval_expr(self, expr: ast.Expr) -> Evaluation[Value]:
     if isinstance(expr, ast.Expr_Var):
       name = expr
-      return self.ctx.mem[self.ctx.env[name]]
+      return self.ctx.get(name)
 
     elif isinstance(expr, ast.Expr_Lit):
       if isinstance(expr.val, str):
@@ -205,7 +199,7 @@ class Interpreter:
       raise NotImplementedError
 
   def binop(self, op: ast.BinOp, e1: ast.Expr, e2: ast.Expr) -> \
-    Generator[Context, None, Value]:
+    Evaluation[Value]:
     if op != ast.BinOp.Asgn:
       v1 = yield from self.eval_expr(e1)
       v2 = yield from self.eval_expr(e2)
@@ -247,20 +241,20 @@ class Interpreter:
     else:
       raise NotImplementedError
   
-  def unop(self, op: ast.UnOp, e: ast.Expr) -> Generator[Context, None, Value]:
+  def unop(self, op: ast.UnOp, e: ast.Expr) -> Evaluation[Value]:
     
     if op == ast.UnOp.Inc:
       if isinstance(e, ast.Expr_Var):
-        v = self.ctx.mem[self.ctx.env[e]]
-        self.ctx.mem[self.ctx.env[e]] = v + 1
+        v = self.ctx.get(e)
+        self.ctx.assign(e, v + 1)
         return v
       else:
         raise InterpreterError(f'{e} is not a l-value.')
 
     elif op == ast.UnOp.Dec:
       if isinstance(e, ast.Expr_Var):
-        v = self.ctx.mem[self.ctx.env[e]]
-        self.ctx.mem[self.ctx.env[e]] = v - 1
+        v = self.ctx.get(e)
+        self.ctx.assign(e, v - 1)
         return v
       else:
         raise InterpreterError(f'{e} is not a l-value.')
