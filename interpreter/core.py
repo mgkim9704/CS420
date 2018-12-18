@@ -11,6 +11,11 @@ def b2v(b: bool) -> Value:
 def v2b(v: Value) -> bool:
   return (v != 0)
 
+def devoid(v: Optional[TypedValue]) -> TypedValue:
+  if v is None:
+    raise InterpreterError('Cannot use result of void function.')
+  return v
+
 class Interpreter:
 
   # some evaluation context
@@ -62,7 +67,7 @@ class Interpreter:
         # before evaluation of expression...
         yield self.ctx
         vcond = yield from self.eval_expr(cond)
-        bcond = v2b(cast(vcond, BaseType.Int))
+        bcond = v2b(cast(devoid(vcond), BaseType.Int))
         if bcond == False:
           break
 
@@ -81,7 +86,7 @@ class Interpreter:
     elif isinstance(stmt, ast.Stmt_If):
       cond, (ln, body) = stmt
       vcond = yield from self.eval_expr(cond)
-      bcond = v2b(cast(vcond, BaseType.Int))
+      bcond = v2b(cast(devoid(vcond), BaseType.Int))
       if bcond:
         return (yield from self.eval_stmt(body))
       else:
@@ -111,8 +116,9 @@ class Interpreter:
       vret = None
       if stmt.retval != None:
         vret = yield from self.eval_expr(stmt.retval)
-      return (CFD.Return, vret)
+      return (CFD.Return, devoid(vret))
     
+    raise NotImplementedError
     
   def eval_block(self, block: List[ast.SpannedStmt]) -> \
     Evaluation[Tuple[CFD, Optional[TypedValue]]]:
@@ -125,8 +131,11 @@ class Interpreter:
     return (CFD.Go, None)
 
   def eval_func(self, name: str, args: List[TypedValue]) -> \
-    Evaluation[TypedValue]:
+    Evaluation[Optional[TypedValue]]:
     f = self.program[name]
+    if f.ret_type == None and f.ret_type_is_pointer:
+      raise InterpreterError('We don\'t support a void pointer.')
+
     if len(f.arguments) != len(args):
       raise InterpreterError(f'function {name} requires {len(f.arguments)} arguments, but you\'re calling with {len(args)} arguments.')
 
@@ -138,19 +147,30 @@ class Interpreter:
 
     cfd, ret = yield from self.eval_stmt(f.body[1])
 
-    if ret == None:
+    if cfd in [CFD.Break, CFD.Continue]:
       raise InterpreterError(f'function {name} stopped with unexpected control flow directive.')
-
+    if cfd == CFD.Return and ret != None and f.ret_type == None:
+      raise InterpreterError(f'Void function {name} returned somewhat strange.')
+    if f.ret_type != None and ret == None:
+      if name == 'main':
+        # main function, specially, regarded as returning 0 if it didn't returned anything.
+        ret = (BaseType.Int, 0)
+      else:
+        raise InterpreterError(f'Non-void function {name} didn\'t return anything.')
+      
     self.ctx.restore_frame(frame)
 
-    ret_t: Type = BaseType.Int
-    if f.ret_type_is_pointer:
-      ret_t = Type_Ptr(f.ret_type)
+    if ret != None:
+      ret_t: Type = BaseType.Int
+      if f.ret_type_is_pointer:
+        ret_t = Type_Ptr(f.ret_type)
+      else:
+        ret_t = f.ret_type
+      return (ret_t, cast(ret, ret_t))
     else:
-      ret_t = f.ret_type
-    return (ret_t, cast(ret, ret_t))
-  
-  def eval_expr(self, expr: ast.Expr) -> Evaluation[TypedValue]:
+      return None
+
+  def eval_expr(self, expr: ast.Expr) -> Evaluation[Optional[TypedValue]]:
     if isinstance(expr, ast.Expr_Var):
       name = expr
       t, addr = self.ctx.env[name]
@@ -188,7 +208,7 @@ class Interpreter:
         vargs = []
         for arg in args:
           varg = yield from self.eval_expr(arg)
-          vargs.append(varg)
+          vargs.append(devoid(varg))
         
         s = fstr.val % tuple(map(lambda a: a[1], vargs))
         print(s)
@@ -198,7 +218,7 @@ class Interpreter:
         vargs = []
         for arg in args:
           varg = yield from self.eval_expr(arg)
-          vargs.append(varg)
+          vargs.append(devoid(varg))
         
         return (yield from self.eval_func(name, vargs))
     
@@ -211,8 +231,10 @@ class Interpreter:
     elif isinstance(expr, ast.Expr_Bin):
       op, (e1, e2) = expr
       if op == ast.BinOp.Idx:
-        base_t, baseaddr = yield from self.eval_expr(e1)
-        delta_t, delta = yield from self.eval_expr(e2)
+        base = yield from self.eval_expr(e1)
+        delta = yield from self.eval_expr(e2)
+        base_t, baseaddr = devoid(base)
+        delta_t, deltaaddr = devoid(delta)
         target_t = None
         if isinstance(base_t, Type_Ptr) and delta_t == BaseType.Int:
           target_t = base_t.alias_t 
@@ -222,8 +244,8 @@ class Interpreter:
         if target_t is None:
           raise InterpreterError(f'One of {e1} and {e2} should be an integer and the other should be a pointer.')
         
-        assert type(baseaddr) == int and type(delta) == int
-        return (target_t, baseaddr + delta)
+        assert type(baseaddr) == int and type(deltaaddr) == int
+        return (target_t, baseaddr + deltaaddr)
     
     raise InterpreterError(f'{expr} is not a l-value.')
 
@@ -232,8 +254,10 @@ class Interpreter:
   def binop(self, op: ast.BinOp, e1: ast.Expr, e2: ast.Expr) -> \
     Evaluation[TypedValue]:
     if op != ast.BinOp.Asgn:
-      t1, v1 = yield from self.eval_expr(e1)
-      t2, v2 = yield from self.eval_expr(e2)
+      value1 = yield from self.eval_expr(e1)
+      value2 = yield from self.eval_expr(e2)
+      t1, v1 = devoid(value1)
+      t2, v2 = devoid(value2)
 
     if op == ast.BinOp.Add:
       if t1 == BaseType.Float or t2 == BaseType.Float:
@@ -280,7 +304,7 @@ class Interpreter:
     elif op == ast.BinOp.Asgn:
       t, addr = yield from self.eval_lvalue(e1)
       value = yield from self.eval_expr(e2)
-      v = cast(value, t)
+      v = cast(devoid(value), t)
       self.ctx.write(addr, v)
       return (t, v)
 
