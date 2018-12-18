@@ -5,7 +5,7 @@ from typing import List, Union, NamedTuple, Optional, NewType, Tuple
 from enum import Enum
 
 BinOp = Enum('BinOp', 'Add Sub Mul Div Mod Eq Ne Lt Gt Le Ge Asgn Idx And Or')
-UnOp = Enum('UnOp', 'Inc Dec Deref')
+UnOp = Enum('UnOp', 'Inc Dec Deref Ref')
 
 Type = Enum('Type', 'Int Float')
 

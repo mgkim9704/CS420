@@ -18,7 +18,7 @@ if __name__ == '__main__':
     print(f'[FAIL] {testname}')
     print(e)
   else:
-    if (res[1] != test.res):
+    if res != None and (res[1] != test.res):
       print(f'[FAIL] {testname}')
     else:
       print(f'[PASS] {testname}')

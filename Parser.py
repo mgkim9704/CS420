@@ -491,7 +491,17 @@ def p_iteration_statement_1(t):
 	'iteration_statement : FOR LPAREN expressionopt SEMI expressionopt SEMI expressionopt RPAREN statement'
 	if len(t[3].list)!=1 or len(t[5].list)!=1 or len(t[7].list)!=1:
 		raise NotImplementedError
-	t[0] = (t.lineno(1), Stmt_For(t[3].list[0], t[5].list[0], t[7].list[0], t[9]))
+	init = t[3].list[0]
+	cond = t[5].list[0]
+	loop = t[7].list[0]
+	if isinstance(init[1], Stmt_Mpty):
+		init = None
+	if isinstance(cond[1], Stmt_Mpty):
+		cond = None
+	if isinstance(loop[1], Stmt_Mpty):
+		loop = None
+	
+	t[0] = (t.lineno(1), Stmt_For(init, cond, loop, t[9]))
 
 def p_iteration_statement_2(t):
 	'iteration_statement : FOR LPAREN declaration expressionopt SEMI expressionopt RPAREN statement'
@@ -880,8 +890,10 @@ def p_unary_expression_3(t):
 
 def p_unary_expression_4(t):
 	'unary_expression : unary_operator cast_expression'
-	if t[1] == 'TIMES':
+	if t[1] == '*':
 		t[0] = Expr_Un(UnOp.Deref, t[2])
+	elif t[1] == '&':
+		t[0] = Expr_Un(UnOp.Ref, t[2])
 	else: raise NotImplementedError 
 
 
@@ -936,7 +948,7 @@ def p_postfix_expression_4(t):
 
 def p_postfix_expression_5(t):
 	'postfix_expression : postfix_expression DECREMENT'
-	t[0] = Expr_Un(UnOp.Inc, t[1])
+	t[0] = Expr_Un(UnOp.Dec, t[1])
 
 def p_postfix_expression_6(t):
 	'postfix_expression : LPAREN type_name RPAREN LBRACKET initializer_list RBRACKET'

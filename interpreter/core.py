@@ -246,7 +246,14 @@ class Interpreter:
         
         assert type(baseaddr) == int and type(deltaaddr) == int
         return (target_t, baseaddr + deltaaddr)
-    
+      
+    elif isinstance(expr, ast.Expr_Un):
+      op, e = expr
+      if op == ast.UnOp.Deref:
+        pointer = yield from self.eval_expr(e)
+        t, addr = devoid(pointer)
+        return (t.alias_t, addr)
+      
     raise InterpreterError(f'{expr} is not a l-value.')
 
   # Evaluate a binary operation.
@@ -329,8 +336,18 @@ class Interpreter:
       return (t, v)
 
     elif op == ast.UnOp.Deref:
+      t, addr = yield from self.eval_expr(e)
+      if isinstance(t, Type_Ptr):
+        return (t.alias_t, self.ctx.read(addr))
+      else:
+        raise InterpreterError('You cannot derefer non-pointer value.')
+
+    elif op == ast.UnOp.Ref:
       t, addr = yield from self.eval_lvalue(e)
-      return (t, self.ctx.read(addr))
+      if isinstance(t, BaseType):
+        return (Type_Ptr(t), addr)
+      else:
+        raise InterpreterError('You cannot refer complex typed value.')
     
     raise NotImplementedError
 
