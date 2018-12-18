@@ -104,7 +104,9 @@ class Interpreter:
       return (CFD.Continue, None)
 
     elif isinstance(stmt, ast.Stmt_Return):
-      vret = yield from self.eval_expr(stmt.retval)
+      vret = None
+      if stmt.retval != None:
+        vret = yield from self.eval_expr(stmt.retval)
       return (CFD.Return, vret)
     
     
@@ -135,7 +137,6 @@ class Interpreter:
     cfd, ret = yield from self.eval_stmt(f.body[1])
 
     if ret == None:
-      assert cfd != CFD.Return
       raise InterpreterError(f'function {name} stopped with unexpected control flow directive.')
 
     self.ctx.restore_frame(frame)
@@ -144,7 +145,11 @@ class Interpreter:
   def eval_expr(self, expr: ast.Expr) -> Evaluation[Value]:
     if isinstance(expr, ast.Expr_Var):
       name = expr
-      return self.ctx.get(name)
+      addr, tp = self.ctx.env[name]
+      if isinstance(tp, Type_Array):
+        return addr
+      else:
+        return self.ctx.mem[addr]
 
     elif isinstance(expr, ast.Expr_Lit):
       if isinstance(expr.val, str):

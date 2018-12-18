@@ -480,7 +480,7 @@ def p_statement_5(t):
 # ---------------------------------------------------------------
 def p_selection_statement_1(t):
 	'selection_statement : IF LPAREN expression RPAREN statement'
-	t[0] = (t.lineno(1), Stmt_If(t[3], t[5]))
+	t[0] = (t.lineno(1), Stmt_If(t[3].list[0], t[5]))
 
 def p_selection_statement_2(t):
 	'selection_statement : IF LPAREN expression RPAREN statement ELSE statement'
@@ -511,7 +511,7 @@ def p_iteration_statement_2(t):
 # ---------------------------------------------------------------
 def p_jump_statement_1(t):
 	'jump_statement : RETURN expressionopt SEMI'
-	t[0] = (t.lineno(1), Stmt_Return(t[2]))
+	t[0] = (t.lineno(1), Stmt_Return(t[2].list[0]))
 
 def p_jump_statement_2(t):
 	'jump_statement : BREAK SEMI'
@@ -646,7 +646,7 @@ def p_assignment_expression_1(t):
 
 def p_assignment_expression_2(t):
 	'assignment_expression : unary_expression assignment_operator assignment_expression'
-	t[0] = Expr_Bin(BinOp.Asgn, (Expr_Var(t[1]), t[3]))
+	t[0] = Expr_Bin(BinOp.Asgn, (t[1], t[3]))
 
 
 # ---------------------------------------------------------------

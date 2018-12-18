@@ -50,7 +50,7 @@ class Stmt_Decl(NamedTuple):
   names: List[DecoratedName]
 
 class Stmt_Return(NamedTuple):
-  retval: Expr
+  retval: Optional[Expr]
 
 class Stmt_Expr(NamedTuple):
   expr: Expr

@@ -1,0 +1,1 @@
+res=6765 #  from https://oeis.org/A000045/list
