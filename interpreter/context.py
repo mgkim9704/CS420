@@ -84,6 +84,12 @@ class Context():
     self.env[var_name] = (t, addr)
     return addr
 
+  def where(self, name: str) -> int:
+    try:
+      return self.env[name]
+    except KeyError:
+      raise InterpreterError(f'No such variable {name}.')
+
   def read(self, addr: int) -> Value:
     if addr >= len(self.mem):
       raise InterpreterError('Segmentation Fault')

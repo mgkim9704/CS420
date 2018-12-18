@@ -21,10 +21,12 @@ class Interpreter:
   # some evaluation context
   program: Program
   ctx: Context
+  verbose: bool
 
   def __init__(self, p: ast.Program) -> None:
     self.program = {}
     self.ctx = Context()
+    self.verbose = False
 
     for f in p:
       if f.name in self.program:
@@ -46,7 +48,7 @@ class Interpreter:
 
     # before actually evaluate statements,
     # yield our context.
-    print (stmt)
+    print (stmt) if self.verbose else ()
     yield self.ctx
 
     if isinstance(stmt, ast.Stmt_Comp):
@@ -173,7 +175,7 @@ class Interpreter:
   def eval_expr(self, expr: ast.Expr) -> Evaluation[Optional[TypedValue]]:
     if isinstance(expr, ast.Expr_Var):
       name = expr
-      t, addr = self.ctx.env[name]
+      t, addr = self.ctx.where(name)
 
       # evaluation of array variable automatically converted into a pointer
       # to the 0-th element of array.
@@ -227,7 +229,7 @@ class Interpreter:
 
   def eval_lvalue(self, expr: ast.Expr) -> Evaluation[Tuple[Type, int]]:
     if isinstance(expr, ast.Expr_Var):
-      return self.ctx.env[expr]
+      return self.ctx.where(expr)
     elif isinstance(expr, ast.Expr_Bin):
       op, (e1, e2) = expr
       if op == ast.BinOp.Idx:

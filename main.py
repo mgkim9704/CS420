@@ -29,33 +29,63 @@ interp = interpreter.core.Interpreter(program)
 evaluation = interp.eval_func(funcname, args)
 lineno = 0
 
-while True:
+def dump_var(name):
   try:
-    ctx = next(evaluation)
-    print (ctx)
+    t, addr = ctx.where(name)
+  except interpreter.core.InterpreterError as e:
+    print(e.message)
+  else:
+    if isinstance(t, interpreter.core.Type_Array):
+      print(f'An array from {addr}, size={t.size}')
+    else:
+      try:
+        v = ctx.read(addr)
+      except interpreter.core.InterpreterError as e:
+        print('N/A')
+      else:
+        if isinstance(t, interpreter.core.Type_Ptr):
+          print(f'Pointer to address {v}')
+        else:
+          print(str(v))
+
+def proceed(num: int):
+  global ctx
+  try:
+    for _ in range(num):
+      ctx = next(evaluation)
   except StopIteration as e:
     print('Evaluation finished with ' + str(e.value))
-    break
+    exit(0)
 
+ctx = next(evaluation)
+
+while True:
   i=input(">> ")
   iList = i.split()
   iListNum = len(iList)
 
   if iListNum==1 and iList[0] == "next":
-    lineno = lineno +1
-    print("next")
-    continue
+    proceed(1)
+
   elif iListNum==1 and iList[0] == "exit":
-    break
+    exit(0)
+
   elif iListNum==2 and iList[0] == "next":
     lineno = iList[1]
-    print("next", iList[1])
+    
+    
   elif iListNum==2 and iList[0] == "print":
-    history.iprint(lineno, iList[1])
-    print("print", iList[1])
+    varname = iList[1]
+    dump_var(varname)
+    
   elif iListNum==2 and iList[0] == "trace":
     history.itrace(lineno, iList[1])
     print("trace", iList[1])
+  elif iListNum==1 and iList[0] == "verbose":
+    interp.verbose = not interp.verbose
+    print("Verbose mode is switched.")
+  elif iListNum==0 and interp.verbose: # no input => regard as continue
+    break
   else:
     print("Error: invalid command!")
 
