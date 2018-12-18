@@ -88,6 +88,8 @@ class Interpreter:
     elif isinstance(stmt, ast.Stmt_Decl):
       basetype, names = stmt
       for name, deco in names:
+        if basetype == None:
+          raise InterpreterError('You cannot declare void type variable')
         t = get_type(basetype, deco)
         self.ctx.add(name, t)
         

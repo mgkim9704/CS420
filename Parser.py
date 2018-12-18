@@ -137,7 +137,6 @@ def p_storage_class_specifier(t):
 # ---------------------------------------------------------------
 # type-specifier:
 #	void
-#	char
 #	int
 #	float
 # ---------------------------------------------------------------
@@ -146,14 +145,10 @@ def p_type_specifier_1(t):
 	t[0] = None
 
 def p_type_specifier_2(t):
-	'type_specifier : CHAR'
-	t[0] = Type.Char
-
-def p_type_specifier_3(t):
 	'type_specifier : INT'
 	t[0] = Type.Int
 
-def p_type_specifier_4(t):
+def p_type_specifier_3(t):
 	'type_specifier : FLOAT'
 	t[0] = Type.Float
 
