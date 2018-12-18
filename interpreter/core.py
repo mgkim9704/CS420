@@ -28,7 +28,7 @@ class Interpreter:
 
   # run the given program
   # return: the return value of main function
-  def run(self) -> Value:
+  def run(self) -> TypedValue:
     evaluation = self.eval_func('main', [])
     while True:
       try:
@@ -37,7 +37,7 @@ class Interpreter:
         return e.value
     
   def eval_stmt(self, stmt: ast.Stmt) -> \
-    Evaluation[Tuple[CFD, Optional[Value]]]:
+    Evaluation[Tuple[CFD, Optional[TypedValue]]]:
 
     # before actually evaluate statements,
     # yield our context.
@@ -62,7 +62,8 @@ class Interpreter:
         # before evaluation of expression...
         yield self.ctx
         vcond = yield from self.eval_expr(cond)
-        if vcond == 0:
+        bcond = v2b(cast(vcond, BaseType.Int))
+        if bcond == False:
           break
 
         cfd, ret = yield from self.eval_stmt(body)
@@ -80,7 +81,8 @@ class Interpreter:
     elif isinstance(stmt, ast.Stmt_If):
       cond, (ln, body) = stmt
       vcond = yield from self.eval_expr(cond)
-      if vcond != 0:
+      bcond = v2b(cast(vcond, BaseType.Int))
+      if bcond:
         return (yield from self.eval_stmt(body))
       else:
         return (CFD.Go, None)
@@ -113,7 +115,7 @@ class Interpreter:
     
     
   def eval_block(self, block: List[ast.SpannedStmt]) -> \
-    Evaluation[Tuple[CFD, Optional[Value]]]:
+    Evaluation[Tuple[CFD, Optional[TypedValue]]]:
     
     for ln, stmt in block:
       cfd, ret = yield from self.eval_stmt(stmt)
@@ -122,19 +124,17 @@ class Interpreter:
     
     return (CFD.Go, None)
 
-  def eval_func(self, name: str, args: List[Value]) -> \
-    Evaluation[Value]:
+  def eval_func(self, name: str, args: List[TypedValue]) -> \
+    Evaluation[TypedValue]:
     f = self.program[name]
     if len(f.arguments) != len(args):
       raise InterpreterError(f'function {name} requires {len(f.arguments)} arguments, but you\'re calling with {len(args)} arguments.')
 
     frame = self.ctx.new_frame()
-    for (tp, (arg_name, _)), arg in zip(f.arguments, args):
-      if not isinstance(arg, {ast.Type.Int: int, ast.Type.Float: float}[tp]):
-        raise InterpreterError(f'{arg} doesn\'t have type {tp}.')
-
-      self.ctx.add(arg_name, tp)
-      self.ctx.assign(arg_name, arg)
+    for (bt, (arg_name, deco)), arg in zip(f.arguments, args):
+      t = get_type(bt, deco)
+      addr = self.ctx.add(arg_name, t)
+      self.ctx.write(addr, cast(arg, t))
 
     cfd, ret = yield from self.eval_stmt(f.body[1])
 
@@ -142,25 +142,31 @@ class Interpreter:
       raise InterpreterError(f'function {name} stopped with unexpected control flow directive.')
 
     self.ctx.restore_frame(frame)
-    return ret
+
+    ret_t: Type = BaseType.Int
+    if f.ret_type_is_pointer:
+      ret_t = Type_Ptr(f.ret_type)
+    else:
+      ret_t = f.ret_type
+    return (ret_t, cast(ret, ret_t))
   
-  def eval_expr(self, expr: ast.Expr) -> Evaluation[Value]:
+  def eval_expr(self, expr: ast.Expr) -> Evaluation[TypedValue]:
     if isinstance(expr, ast.Expr_Var):
       name = expr
-      addr, tp = self.ctx.env[name]
+      t, addr = self.ctx.env[name]
 
       # evaluation of array variable automatically converted into a pointer
       # to the 0-th element of array.
-      if isinstance(tp, Type_Array):
-        return addr
+      if isinstance(t, Type_Array):
+        return (Type_Ptr(t.elem_t), addr)
       else:
-        return self.ctx.read(addr)
+        return (t, self.ctx.read(addr))
 
     elif isinstance(expr, ast.Expr_Lit):
       if isinstance(expr.val, str):
         raise InterpreterError('You cannot use string literal but in printf function.')
       val = expr.val
-      return val
+      return ({int: BaseType.Int, float: BaseType.Float}[type(val)], val)
     
     elif isinstance(expr, ast.Expr_Bin):
       bop, (e1, e2) = expr
@@ -184,9 +190,9 @@ class Interpreter:
           varg = yield from self.eval_expr(arg)
           vargs.append(varg)
         
-        s = fstr.val % tuple(vargs)
+        s = fstr.val % tuple(map(lambda a: a[1], vargs))
         print(s)
-        return len(s)
+        return (BaseType.Int, len(s))
 
       else:
         vargs = []
@@ -199,87 +205,110 @@ class Interpreter:
     else:
       raise NotImplementedError
 
-  def eval_lvalue(self, expr: ast.Expr) -> Evaluation[int]:
+  def eval_lvalue(self, expr: ast.Expr) -> Evaluation[Tuple[Type, int]]:
     if isinstance(expr, ast.Expr_Var):
-      addr, t = self.ctx.env[expr]
-      return addr
+      return self.ctx.env[expr]
     elif isinstance(expr, ast.Expr_Bin):
       op, (e1, e2) = expr
       if op == ast.BinOp.Idx:
-        baseaddr = yield from self.eval_expr(e1)
-        delta = yield from self.eval_expr(e2)
-        return baseaddr + delta
+        base_t, baseaddr = yield from self.eval_expr(e1)
+        delta_t, delta = yield from self.eval_expr(e2)
+        target_t = None
+        if isinstance(base_t, Type_Ptr) and delta_t == BaseType.Int:
+          target_t = base_t.alias_t 
+        elif isinstance(delta_t, Type_Ptr) and base_t == BaseType.Int:
+          target_t = delta_t.alias_t
+        
+        if target_t is None:
+          raise InterpreterError(f'One of {e1} and {e2} should be an integer and the other should be a pointer.')
+        
+        assert type(baseaddr) == int and type(delta) == int
+        return (target_t, baseaddr + delta)
     
     raise InterpreterError(f'{expr} is not a l-value.')
 
+  # Evaluate a binary operation.
+  # For simplicity, any pointers in e1 and/or e2 are regarded as an integer.
   def binop(self, op: ast.BinOp, e1: ast.Expr, e2: ast.Expr) -> \
-    Evaluation[Value]:
-    if op != ast.BinOp.Asgn and op != ast.BinOp.Idx:
-      v1 = yield from self.eval_expr(e1)
-      v2 = yield from self.eval_expr(e2)
+    Evaluation[TypedValue]:
+    if op != ast.BinOp.Asgn:
+      t1, v1 = yield from self.eval_expr(e1)
+      t2, v2 = yield from self.eval_expr(e2)
 
     if op == ast.BinOp.Add:
-      return v1 + v2
+      if t1 == BaseType.Float or t2 == BaseType.Float:
+        return (BaseType.Float, v1 + v2)
+      else:
+        return (BaseType.Int, v1 + v2)
     elif op == ast.BinOp.Sub:
-      return v1 - v2
+      if t1 == BaseType.Float or t2 == BaseType.Float:
+        return (BaseType.Float, v1 - v2)
+      else:
+        return (BaseType.Int, v1 - v2)
     elif op == ast.BinOp.Mul:
-      return v1 * v2
+      if t1 == BaseType.Float or t2 == BaseType.Float:
+        return (BaseType.Float, v1 * v2)
+      else:
+        return (BaseType.Int, v1 * v2)
     elif op == ast.BinOp.Div:
-      return v1 / v2
+      if t1 == BaseType.Float or t2 == BaseType.Float:
+        return (BaseType.Float, v1 / v2)
+      else:
+        return (BaseType.Int, int(v1 / v2))
     elif op == ast.BinOp.Mod:
-      return v1 % v2
+      if t1 == BaseType.Float or t2 == BaseType.Float:
+        return (BaseType.Float, v1 % v2)
+      else:
+        return (BaseType.Int, v1 % v2)
     elif op == ast.BinOp.Eq:
-      return v1 == v2
+      return (BaseType.Int, b2v(v1 == v2))
     elif op == ast.BinOp.Ne:
-      return v1 != v2
+      return (BaseType.Int, b2v(v1 != v2))
     elif op == ast.BinOp.Lt:
-      return b2v(v1 < v2)
+      return (BaseType.Int, b2v(v1 < v2))
     elif op == ast.BinOp.Gt:
-      return b2v(v1 > v2)
+      return (BaseType.Int, b2v(v1 > v2))
     elif op == ast.BinOp.Le:
-      return b2v(v1 <= v2)
+      return (BaseType.Int, b2v(v1 <= v2))
     elif op == ast.BinOp.Ge:
-      return b2v(v1 >= v2)
+      return (BaseType.Int, b2v(v1 >= v2))
     # todo: short-circuit
     elif op == ast.BinOp.And:
-      return b2v(v2b(v1) and v2b(v2))
+      return (BaseType.Int, b2v(v2b(v1) and v2b(v2)))
     elif op == ast.BinOp.Or:
-      return b2v(v2b(v1) or v2b(v2))
+      return (BaseType.Int, b2v(v2b(v1) or v2b(v2)))
     elif op == ast.BinOp.Asgn:
-      addr = yield from self.eval_lvalue(e1)
-      v = yield from self.eval_expr(e2)
-      self.ctx.mem[addr] = v
-      return v
+      t, addr = yield from self.eval_lvalue(e1)
+      value = yield from self.eval_expr(e2)
+      v = cast(value, t)
+      self.ctx.write(addr, v)
+      return (t, v)
 
     elif op == ast.BinOp.Idx:
-      addr = yield from self.eval_expr(e1)
-      delta = yield from self.eval_expr(e2)
-      return self.ctx.read(addr + delta)
+      t, addr = yield from self.eval_lvalue(ast.Expr_Bin(op, (e1, e2)))
+      return (t, self.ctx.read(addr))
     
     raise NotImplementedError
   
-  def unop(self, op: ast.UnOp, e: ast.Expr) -> Evaluation[Value]:
+  def unop(self, op: ast.UnOp, e: ast.Expr) -> Evaluation[TypedValue]:
     
     if op == ast.UnOp.Inc:
-      if isinstance(e, ast.Expr_Var):
-        v = self.ctx.get(e)
-        self.ctx.assign(e, v + 1)
-        return v
-      else:
-        raise InterpreterError(f'{e} is not a l-value.')
+      t, addr = yield from self.eval_lvalue(e)
+      v = self.ctx.read(addr)
+      self.ctx.write(addr, v + 1)
+      return (t, v)
 
     elif op == ast.UnOp.Dec:
-      if isinstance(e, ast.Expr_Var):
-        v = self.ctx.get(e)
-        self.ctx.assign(e, v - 1)
-        return v
-      else:
-        raise InterpreterError(f'{e} is not a l-value.')
+      t, addr = yield from self.eval_lvalue(e)
+      v = self.ctx.read(addr)
+      self.ctx.write(addr, v - 1)
+      return (t, v)
 
-    else:
-      raise NotImplementedError
-
-    yield
+    elif op == ast.UnOp.Deref:
+      t, addr = yield from self.eval_lvalue(e)
+      return (t, self.ctx.read(addr))
+    
+    raise NotImplementedError
 
 #######################################################################
 # Some test cases
