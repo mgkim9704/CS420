@@ -66,6 +66,16 @@ class Context():
     x, t = self.env[var_name]
     return self.mem[x]
 
+  def read(self, addr: int) -> Value:
+    if addr >= len(self.mem):
+      raise InterpreterError('Segmentation Fault')
+    else:
+      v = self.mem[addr]
+      if v is None:
+        raise InterpreterError('Cannot read uninitalized memory')
+      else:
+        return v
+
   def new_frame(self) -> Tuple[Dict[str, Tuple[int, Type]], int]:
     ret = (self.env, len(self.mem))
     self.env = {}

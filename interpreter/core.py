@@ -148,10 +148,13 @@ class Interpreter:
     if isinstance(expr, ast.Expr_Var):
       name = expr
       addr, tp = self.ctx.env[name]
+
+      # evaluation of array variable automatically converted into a pointer
+      # to the 0-th element of array.
       if isinstance(tp, Type_Array):
         return addr
       else:
-        return self.ctx.mem[addr]
+        return self.ctx.read(addr)
 
     elif isinstance(expr, ast.Expr_Lit):
       if isinstance(expr.val, str):
@@ -249,12 +252,9 @@ class Interpreter:
       return v
 
     elif op == ast.BinOp.Idx:
-      if isinstance(e1, ast.Expr_Var):
-        v = yield from self.eval_expr(e2)
-        addr, _ = self.ctx.env[e1]
-        return self.ctx.mem[addr + v]
-      else:
-        raise NotImplementedError
+      addr = yield from self.eval_expr(e1)
+      delta = yield from self.eval_expr(e2)
+      return self.ctx.read(addr + delta)
     
     raise NotImplementedError
   

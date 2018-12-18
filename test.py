@@ -14,8 +14,9 @@ if __name__ == '__main__':
   interp = Interpreter(program)
   try:
     res = interp.run()
-  except:
+  except Exception as e:
     print(f'[FAIL] {testname}')
+    print(e)
   else:
     if (res != test.res):
       print(f'[FAIL] {testname}')

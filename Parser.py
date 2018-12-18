@@ -745,11 +745,11 @@ def p_equality_expression_1(t):
 
 def p_equality_expression_2(t):
 	'equality_expression : equality_expression EQ relational_expression'
-	t[0] = Expr_Bin(BinOp.Eq, t[1], t[3])
+	t[0] = Expr_Bin(BinOp.Eq, (t[1], t[3]))
 
 def p_equality_expression_3(t):
 	'equality_expression : equality_expression NE relational_expression'
-	t[0] = Expr_Bin(BinOp.Ne, t[1], t[3])
+	t[0] = Expr_Bin(BinOp.Ne, (t[1], t[3]))
 
 
 # ---------------------------------------------------------------
