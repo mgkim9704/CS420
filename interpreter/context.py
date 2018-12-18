@@ -60,16 +60,32 @@ class InterpreterError(Exception):
   def __init__(self, message):
     self.message = message
 
+class Record:
+  trace: List[Tuple[int, Optional[Value]]]
+
+  def __init__(self, ln: int):
+    self.trace = [(ln, None)]
+
+  def read(self) -> Optional[Value]:
+    return self.trace[-1][1]
+  
+  def write(self, ln: int, v: Value):
+    self.trace.append((ln, v))
+
+  def __repr__(self) -> str:
+    return str(self.trace[-1][1])
+    
+
 class Context():
   env: Dict[str, Tuple[Type, int]]
-  mem: List[Optional[Value]]
+  mem: List[Record]
 
   def __init__(self):
     self.env = {}
     self.mem = []
 
   # Declare a new variable and return its address. 
-  def add(self, var_name: str, t: Type) -> int:
+  def add(self, var_name: str, t: Type, ln: int) -> int:
     # None means 'not assgined yet'
     if var_name in self.env:
       raise InterpreterError(f'{var_name} is already declared vairable.')
@@ -78,13 +94,13 @@ class Context():
     if isinstance(t, Type_Array):
       if t.size < 0:
         raise InterpreterError('An array must have non-negative size.')
-      self.mem += [None] * t.size
+      self.mem += [Record(ln) for _ in range(t.size)]
     else:
-      self.mem.append(None)
+      self.mem.append(Record(ln))
     self.env[var_name] = (t, addr)
     return addr
 
-  def where(self, name: str) -> int:
+  def where(self, name: str) -> Tuple[Type, int]:
     try:
       return self.env[name]
     except KeyError:
@@ -94,29 +110,44 @@ class Context():
     if addr >= len(self.mem):
       raise InterpreterError('Segmentation Fault')
     else:
-      v = self.mem[addr]
+      v = self.mem[addr].read()
       if v is None:
         raise InterpreterError('Cannot read uninitalized memory')
       else:
         return v
 
-  def write(self, addr: int, v: Value):
+  def write(self, addr: int, v: Value, ln: int):
     if addr >= len(self.mem):
       raise InterpreterError('Segmentation Fault')
     
-    self.mem[addr] = v
+    self.mem[addr].write(ln, v)
 
-  def new_frame(self) -> Tuple[Dict[str, Tuple[int, Type]], int]:
+  def new_frame(self) -> Tuple[Dict[str, Tuple[Type, int]], int]:
     ret = (self.env, len(self.mem))
     self.env = {}
     return ret
 
-  def restore_frame(self, frame: Tuple[Dict[str, Tuple[int, Type]], int]):
+  def restore_frame(self, frame: Tuple[Dict[str, Tuple[Type, int]], int]):
     self.env, fp = frame
     del self.mem[fp:]
 
   def __repr__(self):
-    return f'({self.env}, {self.mem})'
+    res = ''
+    for name in self.env:
+      t, addr = self.env[name]
+      if isinstance(t, BaseType):
+        res += f'{name}(at {addr}) = {self.mem[addr].read()}\n'
+      elif isinstance(t, Type_Ptr):
+        v = self.mem[addr].read()
+        if len(self.mem) <= v:
+          derefv = 'Invalid dereference'
+        else:
+          derefv = str(self.mem[v].read())
+        res += f'{name}(at {addr}) = {v}, *{name} = {derefv}\n'
+      else:
+        for i in range(t.size):
+          res +=f'{name}[{i}](at {addr + i}) = {self.mem[addr + i].read()}\n'
+    return res
   
 
 T = TypeVar('T')

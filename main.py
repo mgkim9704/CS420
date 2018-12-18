@@ -26,7 +26,7 @@ with open(filename, 'r') as f:
 history = History()
 program = Parser.parse(code)
 interp = interpreter.core.Interpreter(program)
-evaluation = interp.eval_func(funcname, args)
+evaluation = interp.eval_func(funcname, args, 0)
 lineno = 0
 
 def dump_var(name):
@@ -53,9 +53,31 @@ def proceed(num: int):
   try:
     for _ in range(num):
       ctx = next(evaluation)
+      print(ctx) if interp.verbose else ()
   except StopIteration as e:
     print('Evaluation finished with ' + str(e.value))
     exit(0)
+
+def trace_elem(name: str, addr: int):
+  record = ctx.mem[addr]
+  for ln, v in record.trace:
+    vstr = 'N/A' if v is None else str(v)
+    print(f'{name}= ' + vstr + f' at line {ln}')
+  
+  print('')
+
+def trace(name: str):
+  try:
+    t, addr = ctx.where(name)
+  except interpreter.core.InterpreterError as e:
+    print(e.message)
+  else:
+    if isinstance(t, interpreter.core.Type_Array):
+      for i in range(t.size):
+        trace_elem(f'{name}[{i}]', addr + i)
+    else:
+      trace_elem(name, addr)
+
 
 ctx = next(evaluation)
 
@@ -72,20 +94,21 @@ while True:
 
   elif iListNum==2 and iList[0] == "next":
     lineno = iList[1]
-    
+    proceed(int(lineno))
     
   elif iListNum==2 and iList[0] == "print":
     varname = iList[1]
     dump_var(varname)
     
   elif iListNum==2 and iList[0] == "trace":
-    history.itrace(lineno, iList[1])
-    print("trace", iList[1])
+    trace(iList[1])
+
   elif iListNum==1 and iList[0] == "verbose":
     interp.verbose = not interp.verbose
     print("Verbose mode is switched.")
+
   elif iListNum==0 and interp.verbose: # no input => regard as continue
-    break
+    proceed(1)
   else:
     print("Error: invalid command!")
 

@@ -36,14 +36,14 @@ class Interpreter:
   # run the given program
   # return: the return value of main function
   def run(self) -> TypedValue:
-    evaluation = self.eval_func('main', [])
+    evaluation = self.eval_func('main', [], 0)
     while True:
       try:
         next(evaluation)
       except StopIteration as e:
         return e.value
     
-  def eval_stmt(self, stmt: ast.Stmt) -> \
+  def eval_stmt(self, stmt: ast.Stmt, ln: int) -> \
     Evaluation[Tuple[CFD, Optional[TypedValue]]]:
 
     # before actually evaluate statements,
@@ -56,9 +56,9 @@ class Interpreter:
       return (yield from self.eval_block(body))
 
     elif isinstance(stmt, ast.Stmt_For):
-      init, cond, loop, (ln, body) = stmt
+      init, cond, loop, (ln_inner, body) = stmt
       if init is not None:
-        yield from self.eval_expr(init)
+        yield from self.eval_expr(init, ln)
 
       if cond is None:
         cond = ast.Expr_Lit(1)
@@ -68,12 +68,12 @@ class Interpreter:
 
         # before evaluation of expression...
         yield self.ctx
-        vcond = yield from self.eval_expr(cond)
+        vcond = yield from self.eval_expr(cond, ln)
         bcond = v2b(cast(devoid(vcond), BaseType.Int))
         if bcond == False:
           break
 
-        cfd, ret = yield from self.eval_stmt(body)
+        cfd, ret = yield from self.eval_stmt(body, ln_inner)
         if cfd == CFD.Break:
           return (CFD.Go, None)
         elif cfd == CFD.Return:
@@ -81,16 +81,16 @@ class Interpreter:
 
         # if cfd is CFD.Continue or CFD.Go, just keep going
         if loop is not None:
-          yield from self.eval_expr(loop)
+          yield from self.eval_expr(loop, ln)
       
       return (CFD.Go, None)
     
     elif isinstance(stmt, ast.Stmt_If):
-      cond, (ln, body) = stmt
-      vcond = yield from self.eval_expr(cond)
+      cond, (ln_inner, body) = stmt
+      vcond = yield from self.eval_expr(cond, ln)
       bcond = v2b(cast(devoid(vcond), BaseType.Int))
       if bcond:
-        return (yield from self.eval_stmt(body))
+        return (yield from self.eval_stmt(body, ln_inner))
       else:
         return (CFD.Go, None)
     
@@ -100,12 +100,12 @@ class Interpreter:
         if basetype == None:
           raise InterpreterError('You cannot declare void type variable')
         t = get_type(basetype, deco)
-        self.ctx.add(name, t)
+        self.ctx.add(name, t, ln)
         
       return (CFD.Go, None)
     
     elif isinstance(stmt, ast.Stmt_Expr):
-      yield from self.eval_expr(stmt.expr)
+      yield from self.eval_expr(stmt.expr, ln)
       return (CFD.Go, None)
 
     elif isinstance(stmt, ast.Stmt_Break):
@@ -117,7 +117,7 @@ class Interpreter:
     elif isinstance(stmt, ast.Stmt_Return):
       vret = None
       if stmt.retval != None:
-        vret = yield from self.eval_expr(stmt.retval)
+        vret = yield from self.eval_expr(stmt.retval, ln)
       return (CFD.Return, devoid(vret))
     
     raise NotImplementedError
@@ -126,13 +126,13 @@ class Interpreter:
     Evaluation[Tuple[CFD, Optional[TypedValue]]]:
     
     for ln, stmt in block:
-      cfd, ret = yield from self.eval_stmt(stmt)
+      cfd, ret = yield from self.eval_stmt(stmt, ln)
       if cfd != CFD.Go:
         return (cfd, ret)
     
     return (CFD.Go, None)
 
-  def eval_func(self, name: str, args: List[TypedValue]) -> \
+  def eval_func(self, name: str, args: List[TypedValue], ln: int) -> \
     Evaluation[Optional[TypedValue]]:
     f = self.program[name]
     if f.ret_type == None and f.ret_type_is_pointer:
@@ -144,10 +144,12 @@ class Interpreter:
     frame = self.ctx.new_frame()
     for (bt, (arg_name, deco)), arg in zip(f.arguments, args):
       t = get_type(bt, deco)
-      addr = self.ctx.add(arg_name, t)
-      self.ctx.write(addr, cast(arg, t))
+      addr = self.ctx.add(arg_name, t, ln)
+      self.ctx.write(addr, cast(arg, t), ln)
 
-    cfd, ret = yield from self.eval_stmt(f.body[1])
+    # Since function body is always Stmt_Comp, we don't have to know
+    # the line number when calling eval_stmt.
+    cfd, ret = yield from self.eval_stmt(f.body[1], 0)
 
     if cfd in [CFD.Break, CFD.Continue]:
       raise InterpreterError(f'function {name} stopped with unexpected control flow directive.')
@@ -172,7 +174,7 @@ class Interpreter:
     else:
       return None
 
-  def eval_expr(self, expr: ast.Expr) -> Evaluation[Optional[TypedValue]]:
+  def eval_expr(self, expr: ast.Expr, ln: int) -> Evaluation[Optional[TypedValue]]:
     if isinstance(expr, ast.Expr_Var):
       name = expr
       t, addr = self.ctx.where(name)
@@ -192,11 +194,11 @@ class Interpreter:
     
     elif isinstance(expr, ast.Expr_Bin):
       bop, (e1, e2) = expr
-      return (yield from self.binop(bop, e1, e2))
+      return (yield from self.binop(bop, e1, e2, ln))
 
     elif isinstance(expr, ast.Expr_Un):
       uop, e = expr
-      return (yield from self.unop(uop, e))
+      return (yield from self.unop(uop, e, ln))
 
     elif isinstance(expr, ast.Expr_Call):
       name, args = expr
@@ -209,7 +211,7 @@ class Interpreter:
 
         vargs = []
         for arg in args:
-          varg = yield from self.eval_expr(arg)
+          varg = yield from self.eval_expr(arg, ln)
           vargs.append(devoid(varg))
         
         s = fstr.val % tuple(map(lambda a: a[1], vargs))
@@ -219,22 +221,22 @@ class Interpreter:
       else:
         vargs = []
         for arg in args:
-          varg = yield from self.eval_expr(arg)
+          varg = yield from self.eval_expr(arg, ln)
           vargs.append(devoid(varg))
         
-        return (yield from self.eval_func(name, vargs))
+        return (yield from self.eval_func(name, vargs, ln))
     
     else:
       raise NotImplementedError
 
-  def eval_lvalue(self, expr: ast.Expr) -> Evaluation[Tuple[Type, int]]:
+  def eval_lvalue(self, expr: ast.Expr, ln: int) -> Evaluation[Tuple[Type, int]]:
     if isinstance(expr, ast.Expr_Var):
       return self.ctx.where(expr)
     elif isinstance(expr, ast.Expr_Bin):
       op, (e1, e2) = expr
       if op == ast.BinOp.Idx:
-        base = yield from self.eval_expr(e1)
-        delta = yield from self.eval_expr(e2)
+        base = yield from self.eval_expr(e1, ln)
+        delta = yield from self.eval_expr(e2, ln)
         base_t, baseaddr = devoid(base)
         delta_t, deltaaddr = devoid(delta)
         target_t = None
@@ -252,7 +254,7 @@ class Interpreter:
     elif isinstance(expr, ast.Expr_Un):
       op, e = expr
       if op == ast.UnOp.Deref:
-        pointer = yield from self.eval_expr(e)
+        pointer = yield from self.eval_expr(e, ln)
         t, addr = devoid(pointer)
         return (t.alias_t, addr)
       
@@ -260,11 +262,11 @@ class Interpreter:
 
   # Evaluate a binary operation.
   # For simplicity, any pointers in e1 and/or e2 are regarded as an integer.
-  def binop(self, op: ast.BinOp, e1: ast.Expr, e2: ast.Expr) -> \
+  def binop(self, op: ast.BinOp, e1: ast.Expr, e2: ast.Expr, ln: int) -> \
     Evaluation[TypedValue]:
     if op != ast.BinOp.Asgn:
-      value1 = yield from self.eval_expr(e1)
-      value2 = yield from self.eval_expr(e2)
+      value1 = yield from self.eval_expr(e1, ln)
+      value2 = yield from self.eval_expr(e2, ln)
       t1, v1 = devoid(value1)
       t2, v2 = devoid(value2)
 
@@ -311,89 +313,45 @@ class Interpreter:
     elif op == ast.BinOp.Or:
       return (BaseType.Int, b2v(v2b(v1) or v2b(v2)))
     elif op == ast.BinOp.Asgn:
-      t, addr = yield from self.eval_lvalue(e1)
-      value = yield from self.eval_expr(e2)
+      t, addr = yield from self.eval_lvalue(e1, ln)
+      value = yield from self.eval_expr(e2, ln)
       v = cast(devoid(value), t)
-      self.ctx.write(addr, v)
+      self.ctx.write(addr, v, ln)
       return (t, v)
 
     elif op == ast.BinOp.Idx:
-      t, addr = yield from self.eval_lvalue(ast.Expr_Bin(op, (e1, e2)))
+      t, addr = yield from self.eval_lvalue(ast.Expr_Bin(op, (e1, e2)), ln)
       return (t, self.ctx.read(addr))
     
     raise NotImplementedError
   
-  def unop(self, op: ast.UnOp, e: ast.Expr) -> Evaluation[TypedValue]:
+  def unop(self, op: ast.UnOp, e: ast.Expr, ln: int) -> \
+    Evaluation[TypedValue]:
     
     if op == ast.UnOp.Inc:
-      t, addr = yield from self.eval_lvalue(e)
+      t, addr = yield from self.eval_lvalue(e, ln)
       v = self.ctx.read(addr)
-      self.ctx.write(addr, v + 1)
+      self.ctx.write(addr, v + 1, ln)
       return (t, v)
 
     elif op == ast.UnOp.Dec:
-      t, addr = yield from self.eval_lvalue(e)
+      t, addr = yield from self.eval_lvalue(e, ln)
       v = self.ctx.read(addr)
-      self.ctx.write(addr, v - 1)
+      self.ctx.write(addr, v - 1, ln)
       return (t, v)
 
     elif op == ast.UnOp.Deref:
-      t, addr = yield from self.eval_expr(e)
+      t, addr = yield from self.eval_expr(e, ln)
       if isinstance(t, Type_Ptr):
         return (t.alias_t, self.ctx.read(addr))
       else:
         raise InterpreterError('You cannot derefer non-pointer value.')
 
     elif op == ast.UnOp.Ref:
-      t, addr = yield from self.eval_lvalue(e)
+      t, addr = yield from self.eval_lvalue(e, ln)
       if isinstance(t, BaseType):
         return (Type_Ptr(t), addr)
       else:
         raise InterpreterError('You cannot refer complex typed value.')
     
     raise NotImplementedError
-
-#######################################################################
-# Some test cases
-#######################################################################
-
-def test1():
-  ex = ast.Func('test', [], ast.Type.Int, False, ast.Stmt_Comp([ast.Stmt_Return(ast.Expr_Lit(3))]))
-  myint = Interpreter([ex])
-  print(myint.eval_func('test', []))
-
-def test2():
-  ex = ast.Func('test', [], ast.Type.Int, False, ast.Stmt_Comp([ast.Stmt_Return(ast.Expr_Bin(ast.BinOp.Add, (ast.Expr_Lit(1), ast.Expr_Lit(4))))]))
-  myint = Interpreter([ex])
-  print(myint.eval_func('test', []))
-
-def test3():
-  ex = ast.Func('twice', [(ast.Type.Int, ast.DecoratedName('f', False))], ast.Type.Int, False, [ast.Stmt_Return(ast.Expr_Bin(ast.BinOp.Mul, (ast.Expr_Var('f'), ast.Expr_Lit(2))))])
-  myint = Interpreter([ex])
-  print(myint.eval_func('twice', [2]))
-
-def cfd_if():
-  ex = ast.Func('choice', [(ast.Type.Int, ast.DecoratedName('x', False))], ast.Type.Int, False, [ast.Stmt_If(ast.Expr_Bin(ast.BinOp.Gt, (ast.Expr_Var('x'), ast.Expr_Lit(3))), [ast.Stmt_Return(ast.Expr_Lit(1))]), ast.Stmt_Return(ast.Expr_Lit(0))])
-
-  myint = Interpreter([ex])
-  print(myint.eval_func('choice', [4]))
-  myint = Interpreter([ex])
-  print(myint.eval_func('choice', [1]))
-
-def fact():
-  ex = ast.Func('fact', [(ast.Type.Int, ast.DecoratedName('x', False))], ast.Type.Int, False, [ast.Stmt_If(ast.Expr_Bin(ast.BinOp.Le, (ast.Expr_Var('x'), ast.Expr_Lit(2))), [ast.Stmt_Return(ast.Expr_Var('x'))]), ast.Stmt_Return(ast.Expr_Bin(ast.BinOp.Mul, (ast.Expr_Var('x'), ast.Expr_Call('fact', [ast.Expr_Bin(ast.BinOp.Sub, (ast.Expr_Var('x'), ast.Expr_Lit(1)))]))))])
-
-  myint = Interpreter([ex])
-  print(myint.eval_func('fact', [5]))
-
-tests = [test1, test2, test3, cfd_if, fact]
-
-def loadTest():
-  ex = ast.Func('fact', [(ast.Type.Int, ast.DecoratedName('x', False))], ast.Type.Int, False, ast.Stmt_Comp([ast.Stmt_If(ast.Expr_Bin(ast.BinOp.Le, (ast.Expr_Var('x'), ast.Expr_Lit(2))), ast.Stmt_Comp([ast.Stmt_Return(ast.Expr_Var('x'))])), ast.Stmt_Return(ast.Expr_Bin(ast.BinOp.Mul, (ast.Expr_Var('x'), ast.Expr_Call('fact', [ast.Expr_Bin(ast.BinOp.Sub, (ast.Expr_Var('x'), ast.Expr_Lit(1)))]))))]))
-
-  myint = Interpreter([ex])
-  return myint
-
-if __name__ == '__main__':
-  for t in tests:
-    t()
