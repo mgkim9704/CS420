@@ -77,17 +77,18 @@ class Record:
     
 
 class Context():
-  env: Dict[str, Tuple[Type, int]]
+  # latest (innermost) environment is env[0]
+  env: List[Dict[str, Tuple[Type, int]]]
   mem: List[Record]
 
   def __init__(self):
-    self.env = {}
+    self.env = [{}]
     self.mem = []
 
   # Declare a new variable and return its address. 
   def add(self, var_name: str, t: Type, ln: int) -> int:
     # None means 'not assgined yet'
-    if var_name in self.env:
+    if var_name in self.env[0]:
       raise InterpreterError(f'{var_name} is already declared vairable.')
       
     addr = len(self.mem)
@@ -97,14 +98,15 @@ class Context():
       self.mem += [Record(ln) for _ in range(t.size)]
     else:
       self.mem.append(Record(ln))
-    self.env[var_name] = (t, addr)
+    self.env[0][var_name] = (t, addr)
     return addr
 
   def where(self, name: str) -> Tuple[Type, int]:
-    try:
-      return self.env[name]
-    except KeyError:
-      raise InterpreterError(f'No such variable {name}.')
+    for env_frag in self.env:
+      if name in env_frag:
+        return env_frag[name]
+    
+    raise InterpreterError(f'No such variable {name}.')
 
   def read(self, addr: int) -> Value:
     if addr >= len(self.mem):
@@ -122,31 +124,44 @@ class Context():
     
     self.mem[addr].write(ln, v)
 
-  def new_frame(self) -> Tuple[Dict[str, Tuple[Type, int]], int]:
+  def new_frame(self) -> Tuple[List[Dict[str, Tuple[Type, int]]], int]:
     ret = (self.env, len(self.mem))
-    self.env = {}
+    self.env = [{}]
     return ret
 
-  def restore_frame(self, frame: Tuple[Dict[str, Tuple[Type, int]], int]):
+  def restore_frame(self, frame: Tuple[List[Dict[str, Tuple[Type, int]]], int]):
     self.env, fp = frame
+    del self.mem[fp:]
+
+  def new_nested_env(self) -> int:
+    self.env.insert(0, {})
+    return len(self.mem)
+  
+  def drop_innermost_env(self, fp: int):
+    if len(self.env) == 1:
+      raise InterpreterError('Unexpected exit on a function block.')
+    
+    del self.env[0]
     del self.mem[fp:]
 
   def __repr__(self):
     res = ''
-    for name in self.env:
-      t, addr = self.env[name]
-      if isinstance(t, BaseType):
-        res += f'{name}(at {addr}) = {self.mem[addr].read()}\n'
-      elif isinstance(t, Type_Ptr):
-        v = self.mem[addr].read()
-        if len(self.mem) <= v:
-          derefv = 'Invalid dereference'
+    for env in self.env:
+      res += ('---------------------------\n')
+      for name in env:
+        t, addr = env[name]
+        if isinstance(t, BaseType):
+          res += f'{name}(at {addr}) = {self.mem[addr].read()}\n'
+        elif isinstance(t, Type_Ptr):
+          v = self.mem[addr].read()
+          if len(self.mem) <= v:
+            derefv = 'Invalid dereference'
+          else:
+            derefv = str(self.mem[v].read())
+          res += f'{name}(at {addr}) = {v}, *{name} = {derefv}\n'
         else:
-          derefv = str(self.mem[v].read())
-        res += f'{name}(at {addr}) = {v}, *{name} = {derefv}\n'
-      else:
-        for i in range(t.size):
-          res +=f'{name}[{i}](at {addr + i}) = {self.mem[addr + i].read()}\n'
+          for i in range(t.size):
+            res +=f'{name}[{i}](at {addr + i}) = {self.mem[addr + i].read()}\n'
     return res
   
 

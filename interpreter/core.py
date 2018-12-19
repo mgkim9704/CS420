@@ -53,7 +53,19 @@ class Interpreter:
 
     if isinstance(stmt, ast.Stmt_Comp):
       body = stmt.body
-      return (yield from self.eval_block(body))
+
+      # Any function call doesn't use eval_stmt(Stmt_Comp(...)) but
+      # directly call eval_block because they have to manage their
+      # own environment.
+      # Here, when we evaluate a statement block, we have to make
+      # additional empty environment supporting variable shadowing.
+      # Also, allocated stack inside of this block will be free after
+      # exiting the block.
+
+      fp = self.ctx.new_nested_env()
+      ret = yield from self.eval_block(body)
+      self.ctx.drop_innermost_env(fp)
+      return ret
 
     elif isinstance(stmt, ast.Stmt_For):
       init, cond, loop, (ln_inner, body) = stmt
@@ -147,9 +159,9 @@ class Interpreter:
       addr = self.ctx.add(arg_name, t, ln)
       self.ctx.write(addr, cast(arg, t), ln)
 
-    # Since function body is always Stmt_Comp, we don't have to know
-    # the line number when calling eval_stmt.
-    cfd, ret = yield from self.eval_stmt(f.body[1], 0)
+    block = f.body[1]
+    assert isinstance(block, ast.Stmt_Comp)
+    cfd, ret = yield from self.eval_block(block.body)
 
     if cfd in [CFD.Break, CFD.Continue]:
       raise InterpreterError(f'function {name} stopped with unexpected control flow directive.')
