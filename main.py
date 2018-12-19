@@ -26,7 +26,7 @@ with open(filename, 'r') as f:
 history = History()
 program = Parser.parse(code)
 interp = interpreter.core.Interpreter(program)
-evaluation = interp.eval_func(funcname, args, 0)
+evaluation = interp.eval_func(funcname, args, 0, cleanup=False)
 lineno = 0
 
 def dump_var(name):
@@ -55,8 +55,10 @@ def proceed(num: int):
       ctx = next(evaluation)
       print(ctx) if interp.verbose else ()
   except StopIteration as e:
-    print('Evaluation finished with ' + str(e.value))
-    exit(0)
+    if e.value is None:
+      print('Evaluation is finished')
+    else:
+      print('Evaluation finished with ' + str(e.value))
 
 def trace_elem(name: str, addr: int):
   record = ctx.mem[addr]

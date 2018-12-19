@@ -132,8 +132,8 @@ class Interpreter:
     
     return (CFD.Go, None)
 
-  def eval_func(self, name: str, args: List[TypedValue], ln: int) -> \
-    Evaluation[Optional[TypedValue]]:
+  def eval_func(self, name: str, args: List[TypedValue], ln: int, \
+    cleanup: bool = True) -> Evaluation[Optional[TypedValue]]:
     f = self.program[name]
     if f.ret_type == None and f.ret_type_is_pointer:
       raise InterpreterError('We don\'t support a void pointer.')
@@ -161,8 +161,9 @@ class Interpreter:
         ret = (BaseType.Int, 0)
       else:
         raise InterpreterError(f'Non-void function {name} didn\'t return anything.')
-      
-    self.ctx.restore_frame(frame)
+
+    if cleanup:
+      self.ctx.restore_frame(frame)
 
     if ret != None:
       ret_t: Type = BaseType.Int
