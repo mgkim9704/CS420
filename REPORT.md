@@ -30,7 +30,9 @@ AST는 크게 세 종류의 노드로 나누어지며, 첫째는 expression, 둘
 
 `Lexer.py`, `Parser.py`, `parserSupport.py`
 
-_PLY_ 는 David Beazley 가 개발한 lex & yacc의 python 구현체입니다. PLY는 입력한 rule을 기반으로 `LALR(1)` 파서를 생성합니다. 각 production rule 은 앞에서 정의된 AST를 생성하도록 만들어졌습니다. 또한 모든 statement 는 자신의 위치 (줄 번호)를 저장하도록 되어 있습니다. 만약 파싱 도중 문법 오류가 발생하였을 경우 발생한 위치를 알려주고 실행을 종료합니다.
+_PLY_ 는 David Beazley 가 개발한 lex & yacc의 python 구현체입니다. PLY는 설정한 regular expression 정의를 바탕으로 input string을 받아 토큰화 작업을 수행해줍니다. 또한 입력한 BNF rule을 기반으로 `LALR(1)` 파서를 생성합니다. 처음에는 c 문법을 기초로 lexer와 parser의 rule을 작성하였으나 이후 저희 프로젝트의 scope에 맞추기 위해 일부분을 기각하는 방식으로 수정하였습니다. 코드 상에 '<-remove'로 표시된 부분 또는 NotImplementedError를 일으킨 부분이 이에 해당하며 아예 지워진 부분도 존재합니다.  
+
+각 production rule 은 앞에서 정의된 AST를 생성하도록 만들어졌습니다. 또한 모든 statement 는 토큰에 저장된 line number를 통해 자신의 위치 (줄 번호)를 저장하도록 되어 있습니다. 처음부터 scope에 맞추지 않고 기각하는 방식을 사용하였기 때문에 불필요하게 토큰만을 전달하는 중간 단계들이 존재합니다. parserSupport에 rule에 따른 결과 값을 전달하는 과정을 효율적으로 도울 class를 정의하여 사용하였습니다. 만약 파싱 도중 문법 오류가 발생하였을 경우 발생한 위치를 알려주고 실행을 종료합니다.  
 
 ### Interpreter
 
