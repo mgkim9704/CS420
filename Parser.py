@@ -1050,7 +1050,7 @@ def p_error(t):
 parser = yacc.yacc()
 
 def parse(code):
-	return parser.parse(code, lexer = Lexer.lexer)
+	return parser.parse(code, lexer = Lexer.lexer, tracking=True)
 
 
 
@@ -1059,5 +1059,5 @@ if __name__ == '__main__':
 	import sys
 	f = open(sys.argv[1], 'r')
 	code = f.read()
-	p = parser.parse(code, debug = True, lexer = Lexer.lexer)
+	p = parser.parse(code, debug = True, lexer = Lexer.lexer, tracking=True)
 	print(p)
