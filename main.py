@@ -25,6 +25,9 @@ with open(filename, 'r') as f:
 
 history = History()
 program = Parser.parse(code)
+if program == None:
+  exit(-1)
+  
 interp = interpreter.core.Interpreter(program)
 evaluation = interp.eval_func(funcname, args, 0, cleanup=False)
 lineno = 0
