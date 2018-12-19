@@ -471,15 +471,12 @@ def p_statement_5(t):
 # ---------------------------------------------------------------
 # selection-statement:
 #	if ( expression ) statement
-#	if ( expression ) statement else statement
+#	if ( expression ) statement else statement	<- remove
 # ---------------------------------------------------------------
-def p_selection_statement_1(t):
+def p_selection_statement(t):
 	'selection_statement : IF LPAREN expression RPAREN statement'
 	t[0] = (t.lineno(1), Stmt_If(t[3].list[0], t[5]))
 
-def p_selection_statement_2(t):
-	'selection_statement : IF LPAREN expression RPAREN statement ELSE statement'
-	raise NotImplementedError
 
 
 # ---------------------------------------------------------------

@@ -9,7 +9,7 @@ import lex
 # Reserved words
 
 reserved = (
-	'BREAK', 'CHAR', 'CONTINUE', 'ELSE', 'EXTERN', 'FLOAT', 'FOR', 'IF', 'INT', 'RETURN', 'STATIC', 'VOID',
+	'BREAK', 'CONTINUE', 'EXTERN', 'FLOAT', 'FOR', 'IF', 'INT', 'RETURN', 'STATIC', 'VOID',
 )
 
 tokens = reserved + (
